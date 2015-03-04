@@ -77,11 +77,11 @@ module Philiprehberger
         when "*"
           range.to_a
         when %r{\A\*/(\d+)\z}
-          parse_step_token(range, name)
+          parse_step_token($1.to_i, range, name)
         when /\A(\d+)-(\d+)\z/
-          parse_range_token(range, name)
+          parse_range_token($1.to_i, $2.to_i, range, name)
         when %r{\A(\d+)-(\d+)/(\d+)\z}
-          parse_range_step_token(range, name)
+          parse_range_step_token($1.to_i, $2.to_i, $3.to_i, range, name)
         when /\A\d+\z/
           parse_value_token(token, range, name)
         else
@@ -89,23 +89,17 @@ module Philiprehberger
         end
       end
 
-      def parse_step_token(range, name)
-        step = Regexp.last_match(1).to_i
+      def parse_step_token(step, range, name)
         validate_step!(step, name)
         range.step(step).to_a
       end
 
-      def parse_range_token(range, name)
-        low = Regexp.last_match(1).to_i
-        high = Regexp.last_match(2).to_i
+      def parse_range_token(low, high, range, name)
         validate_range!(low, high, range, name)
         (low..high).to_a
       end
 
-      def parse_range_step_token(range, name)
-        low = Regexp.last_match(1).to_i
-        high = Regexp.last_match(2).to_i
-        step = Regexp.last_match(3).to_i
+      def parse_range_step_token(low, high, step, range, name)
         validate_range!(low, high, range, name)
         validate_step!(step, name)
         (low..high).step(step).to_a
