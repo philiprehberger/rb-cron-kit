@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
 
   spec.summary = "Cron expression parser and scheduler"
   spec.description = "A zero-dependency Ruby gem for parsing 5-field cron expressions and running " \
-    "an in-process scheduler. Supports wildcards, ranges, steps, and lists."
+                     "an in-process scheduler. Supports wildcards, ranges, steps, and lists."
   spec.homepage = "https://github.com/philiprehberger/rb-cron-kit"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.1"
