@@ -73,17 +73,16 @@ module Philiprehberger
       end
 
       def parse_token(token, range, name) # rubocop:disable Metrics/MethodLength
-        case token
-        when "*"
+        m = nil
+        if token == "*"
           range.to_a
-        when %r{\A\*/(\d+)\z}
-          parse_step_token(Regexp.last_match(1).to_i, range, name)
-        when /\A(\d+)-(\d+)\z/
-          parse_range_token(Regexp.last_match(1).to_i, Regexp.last_match(2).to_i, range, name)
-        when %r{\A(\d+)-(\d+)/(\d+)\z}
-          parse_range_step_token(Regexp.last_match(1).to_i, Regexp.last_match(2).to_i,
-                                 Regexp.last_match(3).to_i, range, name)
-        when /\A\d+\z/
+        elsif (m = token.match(%r{\A\*/(\d+)\z}))
+          parse_step_token(m[1].to_i, range, name)
+        elsif (m = token.match(/\A(\d+)-(\d+)\z/))
+          parse_range_token(m[1].to_i, m[2].to_i, range, name)
+        elsif (m = token.match(%r{\A(\d+)-(\d+)/(\d+)\z}))
+          parse_range_step_token(m[1].to_i, m[2].to_i, m[3].to_i, range, name)
+        elsif token.match?(/\A\d+\z/)
           parse_value_token(token, range, name)
         else
           raise ParseError, "invalid token #{token.inspect} in #{name} field"
