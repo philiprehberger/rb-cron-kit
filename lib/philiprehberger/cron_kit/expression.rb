@@ -72,21 +72,46 @@ module Philiprehberger
         values.uniq.sort
       end
 
-      def parse_token(token, range, name) # rubocop:disable Metrics/MethodLength
-        m = nil
-        if token == "*"
-          range.to_a
-        elsif (m = token.match(%r{\A\*/(\d+)\z}))
-          parse_step_token(m[1].to_i, range, name)
-        elsif (m = token.match(/\A(\d+)-(\d+)\z/))
-          parse_range_token(m[1].to_i, m[2].to_i, range, name)
-        elsif (m = token.match(%r{\A(\d+)-(\d+)/(\d+)\z}))
-          parse_range_step_token(m[1].to_i, m[2].to_i, m[3].to_i, range, name)
-        elsif token.match?(/\A\d+\z/)
-          parse_value_token(token, range, name)
-        else
-          raise ParseError, "invalid token #{token.inspect} in #{name} field"
-        end
+      def parse_token(token, range, name)
+        try_wildcard(token, range) ||
+          try_step(token, range, name) ||
+          try_range_step(token, range, name) ||
+          try_range(token, range, name) ||
+          try_value(token, range, name) ||
+          raise(ParseError, "invalid token #{token.inspect} in #{name} field")
+      end
+
+      def try_wildcard(token, range)
+        return unless token == "*"
+
+        range.to_a
+      end
+
+      def try_step(token, range, name)
+        m = token.match(%r{\A\*/(\d+)\z})
+        return unless m
+
+        parse_step_token(m[1].to_i, range, name)
+      end
+
+      def try_range_step(token, range, name)
+        m = token.match(%r{\A(\d+)-(\d+)/(\d+)\z})
+        return unless m
+
+        parse_range_step_token(m[1].to_i, m[2].to_i, m[3].to_i, range, name)
+      end
+
+      def try_range(token, range, name)
+        m = token.match(/\A(\d+)-(\d+)\z/)
+        return unless m
+
+        parse_range_token(m[1].to_i, m[2].to_i, range, name)
+      end
+
+      def try_value(token, range, name)
+        return unless token.match?(/\A\d+\z/)
+
+        parse_value_token(token, range, name)
       end
 
       def parse_step_token(step, range, name)
