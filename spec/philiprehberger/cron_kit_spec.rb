@@ -124,3 +124,99 @@ RSpec.describe Philiprehberger::CronKit::Expression do
     end
   end
 end
+
+RSpec.describe Philiprehberger::CronKit::Scheduler do
+  subject(:scheduler) { described_class.new }
+
+  after { scheduler.stop if scheduler.running? }
+
+  describe "#every with name:" do
+    it "registers a named job" do
+      scheduler.every("* * * * *", name: "heartbeat") { nil }
+      expect(scheduler.job_names).to eq(["heartbeat"])
+    end
+
+    it "allows jobs without a name" do
+      scheduler.every("* * * * *") { nil }
+      expect(scheduler.job_names).to be_empty
+    end
+  end
+
+  describe "#job_names" do
+    it "returns all registered named jobs" do
+      scheduler.every("* * * * *", name: "alpha") { nil }
+      scheduler.every("0 * * * *", name: "beta") { nil }
+      scheduler.every("*/5 * * * *") { nil }
+      expect(scheduler.job_names).to eq(%w[alpha beta])
+    end
+  end
+
+  describe "#remove" do
+    it "removes a job by name and returns true" do
+      scheduler.every("* * * * *", name: "temp") { nil }
+      expect(scheduler.remove("temp")).to be true
+      expect(scheduler.job_names).to be_empty
+    end
+
+    it "returns false for an unknown name" do
+      expect(scheduler.remove("nonexistent")).to be false
+    end
+  end
+
+  describe "#next_runs" do
+    it "returns a hash mapping names to next run times" do
+      from = Time.new(2026, 3, 10, 12, 0, 0)
+      scheduler.every("30 * * * *", name: "half_hour") { nil }
+      scheduler.every("0 13 * * *", name: "one_pm") { nil }
+      scheduler.every("*/5 * * * *") { nil } # unnamed, should be excluded
+
+      result = scheduler.next_runs(from: from)
+
+      expect(result.keys).to match_array(%w[half_hour one_pm])
+      expect(result["half_hour"]).to eq(Time.new(2026, 3, 10, 12, 30, 0, from.utc_offset))
+      expect(result["one_pm"]).to eq(Time.new(2026, 3, 10, 13, 0, 0, from.utc_offset))
+    end
+  end
+
+  describe "threaded job execution" do
+    it "executes matching jobs concurrently in separate threads" do
+      results = Queue.new
+
+      # Use an expression that matches the frozen time
+      now = Time.now
+      expr = Philiprehberger::CronKit::Expression.new("* * * * *")
+
+      scheduler.every(expr, name: "slow") do |_t|
+        results << [:slow, Thread.current.object_id]
+        sleep 0.1
+      end
+
+      scheduler.every(expr, name: "fast") do |_t|
+        results << [:fast, Thread.current.object_id]
+      end
+
+      # Directly call tick via send to test without starting the full loop
+      scheduler.send(:tick)
+
+      entries = []
+      entries << results.pop until results.empty?
+
+      names = entries.map(&:first)
+      thread_ids = entries.map(&:last)
+
+      expect(names).to contain_exactly(:slow, :fast)
+      expect(thread_ids.uniq.size).to eq(2)
+    end
+
+    it "rescues errors in individual jobs without crashing" do
+      called = false
+      expr = Philiprehberger::CronKit::Expression.new("* * * * *")
+
+      scheduler.every(expr, name: "failing") { raise StandardError, "boom" }
+      scheduler.every(expr, name: "surviving") { called = true }
+
+      expect { scheduler.send(:tick) }.not_to raise_error
+      expect(called).to be true
+    end
+  end
+end

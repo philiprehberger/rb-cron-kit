@@ -4,7 +4,7 @@ module Philiprehberger
   module CronKit
     # A simple in-process cron scheduler that checks registered jobs every 60 seconds.
     class Scheduler
-      Job = Struct.new(:expression, :block, keyword_init: true)
+      Job = Struct.new(:expression, :block, :name, keyword_init: true)
 
       def initialize
         @jobs = []
@@ -13,14 +13,36 @@ module Philiprehberger
         @running = false
       end
 
-      def every(expression, &block)
+      def every(expression, name: nil, &block)
         expr = expression.is_a?(Expression) ? expression : Expression.new(expression)
 
         @mutex.synchronize do
-          @jobs << Job.new(expression: expr, block: block)
+          @jobs << Job.new(expression: expr, block: block, name: name)
         end
 
         self
+      end
+
+      def job_names
+        @mutex.synchronize { @jobs.map(&:name).compact }
+      end
+
+      def remove(name)
+        @mutex.synchronize do
+          initial_size = @jobs.size
+          @jobs.reject! { |job| job.name == name }
+          @jobs.size < initial_size
+        end
+      end
+
+      def next_runs(from: Time.now)
+        jobs = @mutex.synchronize { @jobs.dup }
+
+        jobs.each_with_object({}) do |job, hash|
+          next unless job.name
+
+          hash[job.name] = job.expression.next_at(from: from)
+        end
       end
 
       def start
@@ -61,9 +83,17 @@ module Philiprehberger
         now = Time.now
         jobs = @mutex.synchronize { @jobs.dup }
 
-        jobs.each do |job|
-          job.block.call(now) if job.expression.match?(now)
+        threads = jobs.filter_map do |job|
+          next unless job.expression.match?(now)
+
+          Thread.new(job, now) do |j, t|
+            j.block.call(t)
+          rescue StandardError
+            # Prevent individual job errors from crashing the scheduler
+          end
         end
+
+        threads.each { |t| t.join(30) }
       end
 
       def sleep_until_next_minute
