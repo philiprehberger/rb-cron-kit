@@ -183,7 +183,6 @@ RSpec.describe Philiprehberger::CronKit::Scheduler do
       results = Queue.new
 
       # Use an expression that matches the frozen time
-      now = Time.now
       expr = Philiprehberger::CronKit::Expression.new("* * * * *")
 
       scheduler.every(expr, name: "slow") do |_t|
