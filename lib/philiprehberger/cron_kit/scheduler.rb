@@ -4,7 +4,9 @@ module Philiprehberger
   module CronKit
     # A simple in-process cron scheduler that checks registered jobs every 60 seconds.
     class Scheduler
-      Job = Struct.new(:expression, :block, :name, keyword_init: true)
+      include TimeoutHandler
+
+      Job = Struct.new(:expression, :block, :name, :timeout, keyword_init: true)
 
       def initialize
         @jobs = []
@@ -13,11 +15,11 @@ module Philiprehberger
         @running = false
       end
 
-      def every(expression, name: nil, &block)
+      def every(expression, name: nil, timeout: nil, &block)
         expr = expression.is_a?(Expression) ? expression : Expression.new(expression)
 
         @mutex.synchronize do
-          @jobs << Job.new(expression: expr, block: block, name: name)
+          @jobs << Job.new(expression: expr, block: block, name: name, timeout: timeout)
         end
 
         self
@@ -86,11 +88,7 @@ module Philiprehberger
         threads = jobs.filter_map do |job|
           next unless job.expression.match?(now)
 
-          Thread.new(job, now) do |j, t|
-            j.block.call(t)
-          rescue StandardError
-            # Prevent individual job errors from crashing the scheduler
-          end
+          start_job_thread(job, now)
         end
 
         threads.each { |t| t.join(30) }

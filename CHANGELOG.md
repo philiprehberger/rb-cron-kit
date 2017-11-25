@@ -1,13 +1,26 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+## [0.3.0] - 2026-03-17
+
+### Added
+
+- Timezone support via `timezone:` option on `parse` and `Expression.new`
+- `Expression#next_runs(count:, from:)` to preview the next N execution times
+- `Expression#previous_run(from:)` to find the most recent past match
+- Job timeout via `timeout:` option on `Scheduler#every` — kills jobs exceeding the limit
+- Non-standard cron aliases: `@hourly`, `@daily`, `@weekly`, `@monthly`, `@yearly`, `@annually`
+- `Aliases` module for alias expansion
+- `Timezone` module for offset resolution (stdlib only)
+- `Parser` module extracted from `Expression` for field parsing logic
+
 ## 0.2.1
 
 - Add License badge to README
 - Add bug_tracker_uri to gemspec
 - Add Development section to README
 - Add Requirements section to README
-
-All notable changes to this project will be documented in this file.
 
 ## [0.2.0] - 2026-03-12
 
@@ -31,5 +44,6 @@ All notable changes to this project will be documented in this file.
 - `Philiprehberger::CronKit.parse` convenience method
 - `Philiprehberger::CronKit.new` convenience method for creating a Scheduler
 
+[0.3.0]: https://github.com/philiprehberger/rb-cron-kit/releases/tag/v0.3.0
 [0.2.0]: https://github.com/philiprehberger/rb-cron-kit/releases/tag/v0.2.0
 [0.1.0]: https://github.com/philiprehberger/rb-cron-kit/releases/tag/v0.1.0
