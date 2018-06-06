@@ -30,8 +30,8 @@ module Philiprehberger
           m = timezone.match(/\A([+-])(\d{1,2}):(\d{2})\z/)
           return unless m
 
-          sign = (m[1] == "+") ? 1 : -1
-          sign * (m[2].to_i * 3600 + m[3].to_i * 60)
+          sign = m[1] == "+" ? 1 : -1
+          sign * ((m[2].to_i * 3600) + (m[3].to_i * 60))
         end
 
         def probe_offset(timezone)
