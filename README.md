@@ -20,7 +20,7 @@ gem "philiprehberger-cron_kit"
 
 Or install directly:
 
-```sh
+```bash
 gem install philiprehberger-cron_kit
 ```
 
@@ -197,4 +197,4 @@ bundle exec rubocop
 
 ## License
 
-[MIT](LICENSE)
+MIT
