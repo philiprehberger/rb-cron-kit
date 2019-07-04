@@ -1,7 +1,7 @@
 # philiprehberger-cron_kit
 
+[![Tests](https://github.com/philiprehberger/rb-cron-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/philiprehberger/rb-cron-kit/actions/workflows/ci.yml)
 [![Gem Version](https://badge.fury.io/rb/philiprehberger-cron_kit.svg)](https://rubygems.org/gems/philiprehberger-cron_kit)
-[![CI](https://github.com/philiprehberger/rb-cron-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/philiprehberger/rb-cron-kit/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/philiprehberger/rb-cron-kit)](LICENSE)
 
 Cron expression parser and scheduler for Ruby. Zero dependencies.
