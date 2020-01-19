@@ -1,13 +1,15 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to this gem will be documented in this file.
 
 ## [Unreleased]
 
-## [0.3.3] - 2026-03-21
+## [0.3.3] - 2026-03-20
 
 ### Fixed
 - Standardize Installation section in README
+- Fix README description format (single sentence, no trailing period)
+- Fix CHANGELOG header wording
 
 ## [0.3.2] - 2026-03-20
 
