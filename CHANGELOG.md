@@ -3,6 +3,10 @@
 All notable changes to this gem will be documented in this file.
 
 ## [Unreleased]
+n## [0.3.4] - 2026-03-22
+
+### Changed
+- Update rubocop configuration for Windows compatibility
 
 ## [0.3.3] - 2026-03-20
 
