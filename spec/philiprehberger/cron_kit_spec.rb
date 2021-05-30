@@ -219,6 +219,16 @@ RSpec.describe Philiprehberger::CronKit::Expression do
       expect(results[1].min).to eq(2)
       expect(results[2].min).to eq(3)
     end
+
+    it "returns results in strictly ascending order" do
+      expr = described_class.new("0,30 9-17 * * 1-5")
+      from = Time.new(2026, 3, 9, 8, 0, 0) # Monday morning
+      results = expr.next_runs(count: 6, from: from)
+
+      results.each_cons(2) do |a, b|
+        expect(a).to be < b
+      end
+    end
   end
 
   describe "#previous_run" do
@@ -295,6 +305,281 @@ RSpec.describe Philiprehberger::CronKit::Expression do
     it "returns the expanded alias" do
       expr = described_class.new("@monthly")
       expect(expr.to_s).to eq("0 0 1 * *")
+    end
+  end
+
+  describe "#raw" do
+    it "exposes the raw expression string" do
+      expr = described_class.new("5 4 * * *")
+      expect(expr.raw).to eq("5 4 * * *")
+    end
+  end
+
+  describe "parser edge cases" do
+    it "parses range-step syntax (1-10/3)" do
+      expr = described_class.new("1-10/3 * * * *")
+      expect(expr.match?(Time.new(2026, 1, 1, 0, 1))).to be true
+      expect(expr.match?(Time.new(2026, 1, 1, 0, 4))).to be true
+      expect(expr.match?(Time.new(2026, 1, 1, 0, 7))).to be true
+      expect(expr.match?(Time.new(2026, 1, 1, 0, 10))).to be true
+      expect(expr.match?(Time.new(2026, 1, 1, 0, 2))).to be false
+    end
+
+    it "raises ParseError for step of zero" do
+      expect { described_class.new("*/0 * * * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /step must be > 0/)
+    end
+
+    it "raises ParseError for zero step in range-step" do
+      expect { described_class.new("1-10/0 * * * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /step must be > 0/)
+    end
+
+    it "raises ParseError for out-of-range low value in range" do
+      expect { described_class.new("* * 0-15 * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+    end
+
+    it "raises ParseError for out-of-range high value in range" do
+      expect { described_class.new("* * 1-32 * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+    end
+
+    it "raises ParseError for hour value of 24" do
+      expect { described_class.new("0 24 * * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+    end
+
+    it "raises ParseError for month value of 0" do
+      expect { described_class.new("0 0 1 0 *") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+    end
+
+    it "raises ParseError for month value of 13" do
+      expect { described_class.new("0 0 1 13 *") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+    end
+
+    it "raises ParseError for day-of-week value of 7" do
+      expect { described_class.new("0 0 * * 7") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+    end
+
+    it "raises ParseError for an empty string" do
+      expect { described_class.new("") }.to raise_error(Philiprehberger::CronKit::ParseError, /expected 5 fields/)
+    end
+
+    it "raises ParseError for whitespace-only input" do
+      expect { described_class.new("   ") }.to raise_error(Philiprehberger::CronKit::ParseError, /expected 5 fields/)
+    end
+
+    it "handles leading and trailing whitespace in valid expressions" do
+      expr = described_class.new("  0 0 * * *  ")
+      expect(expr.match?(Time.new(2026, 1, 1, 0, 0))).to be true
+    end
+
+    it "parses lists combined with ranges" do
+      expr = described_class.new("0,15-20 * * * *")
+      expect(expr.match?(Time.new(2026, 1, 1, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 1, 1, 0, 17))).to be true
+      expect(expr.match?(Time.new(2026, 1, 1, 0, 10))).to be false
+    end
+
+    it "raises ParseError for inverted range in range-step" do
+      expect { described_class.new("10-5/2 * * * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /low > high/)
+    end
+
+    it "raises ParseError for out-of-range values in range-step" do
+      expect { described_class.new("0-60/5 * * * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+    end
+
+    it "raises ParseError for day-of-month value of 0" do
+      expect { described_class.new("0 0 0 * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+    end
+
+    it "raises ParseError for minute value of 60 in a list" do
+      expect { described_class.new("0,60 * * * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+    end
+
+    it "parses full day-of-week range 0-6" do
+      expr = described_class.new("0 0 * * 0-6")
+      (0..6).each do |wday|
+        # Find a date in March 2026 with the target wday
+        day = (1..7).find { |d| Time.new(2026, 3, d).wday == wday }
+        expect(expr.match?(Time.new(2026, 3, day, 0, 0))).to be true
+      end
+    end
+
+    it "parses a single-value list (no comma)" do
+      expr = described_class.new("5 * * * *")
+      expect(expr.match?(Time.new(2026, 1, 1, 0, 5))).to be true
+      expect(expr.match?(Time.new(2026, 1, 1, 0, 6))).to be false
+    end
+
+    it "handles duplicate values in a list" do
+      expr = described_class.new("5,5,5 * * * *")
+      expect(expr.match?(Time.new(2026, 1, 1, 0, 5))).to be true
+      expect(expr.match?(Time.new(2026, 1, 1, 0, 6))).to be false
+    end
+  end
+
+  describe "leap year and month boundary edge cases" do
+    it "matches February 29 on a leap year" do
+      expr = described_class.new("0 0 29 2 *")
+      expect(expr.match?(Time.new(2028, 2, 29, 0, 0))).to be true
+    end
+
+    it "does not match February 29 on a non-leap year date" do
+      expr = described_class.new("0 0 29 2 *")
+      expect(expr.match?(Time.new(2026, 2, 28, 0, 0))).to be false
+    end
+
+    it "finds next Feb 29 occurrence from a non-leap year" do
+      expr = described_class.new("0 0 29 2 *")
+      from = Time.new(2026, 3, 1, 0, 0, 0)
+      result = expr.next_at(from: from)
+      expect(result.year).to eq(2028)
+      expect(result.month).to eq(2)
+      expect(result.day).to eq(29)
+    end
+
+    it "matches the 31st only in months that have 31 days" do
+      expr = described_class.new("0 0 31 * *")
+      expect(expr.match?(Time.new(2026, 1, 31, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 3, 31, 0, 0))).to be true
+    end
+
+    it "finds next_at across month boundary from end of short month" do
+      expr = described_class.new("0 0 31 * *")
+      from = Time.new(2026, 2, 28, 0, 0, 0)
+      result = expr.next_at(from: from)
+      expect(result.month).to eq(3)
+      expect(result.day).to eq(31)
+    end
+
+    it "finds previous_run for Feb 29 going back to last leap year" do
+      expr = described_class.new("0 0 29 2 *")
+      from = Time.new(2026, 3, 1, 0, 0, 0)
+      result = expr.previous_run(from: from)
+      expect(result.year).to eq(2024)
+      expect(result.month).to eq(2)
+      expect(result.day).to eq(29)
+    end
+  end
+
+  describe "leap year and month boundary edge cases (extended)" do
+    it "finds next_at for the 30th skipping February" do
+      expr = described_class.new("0 0 30 * *")
+      from = Time.new(2026, 1, 31, 0, 0, 0)
+      result = expr.next_at(from: from)
+      # February has no 30th, so next match is March 30
+      expect(result.month).to eq(3)
+      expect(result.day).to eq(30)
+    end
+
+    it "matches end-of-year boundary (Dec 31 23:59)" do
+      expr = described_class.new("59 23 31 12 *")
+      expect(expr.match?(Time.new(2026, 12, 31, 23, 59))).to be true
+    end
+
+    it "matches start-of-year boundary (Jan 1 00:00)" do
+      expr = described_class.new("0 0 1 1 *")
+      expect(expr.match?(Time.new(2027, 1, 1, 0, 0))).to be true
+    end
+  end
+
+  describe "#next_at across year boundary" do
+    it "finds the next match when it falls in the following year" do
+      expr = described_class.new("0 0 1 1 *")
+      from = Time.new(2026, 6, 15, 0, 0, 0)
+      result = expr.next_at(from: from)
+      expect(result.year).to eq(2027)
+      expect(result.month).to eq(1)
+      expect(result.day).to eq(1)
+    end
+  end
+
+  describe "#match? with combined field constraints" do
+    it "requires all five fields to match simultaneously" do
+      # 0 9 15 6 1 = minute 0, hour 9, day 15, month June, Monday
+      expr = described_class.new("0 9 15 6 1")
+      # June 15, 2026 is a Monday
+      expect(expr.match?(Time.new(2026, 6, 15, 9, 0))).to be true
+      # Right time/date but wrong day-of-week (June 16 is Tuesday)
+      expect(expr.match?(Time.new(2026, 6, 16, 9, 0))).to be false
+    end
+
+    it "matches day-of-week 0 for Sunday" do
+      expr = described_class.new("0 0 * * 0")
+      # March 8, 2026 is a Sunday
+      expect(expr.match?(Time.new(2026, 3, 8, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 3, 9, 0, 0))).to be false
+    end
+
+    it "matches day-of-week 6 for Saturday" do
+      expr = described_class.new("0 0 * * 6")
+      # March 7, 2026 is a Saturday
+      expect(expr.match?(Time.new(2026, 3, 7, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 3, 8, 0, 0))).to be false
+    end
+  end
+end
+
+RSpec.describe Philiprehberger::CronKit::Timezone do
+  describe ".utc_offset_for" do
+    it "returns nil for nil timezone" do
+      expect(described_class.utc_offset_for(nil)).to be_nil
+    end
+
+    it "returns 0 for UTC" do
+      expect(described_class.utc_offset_for("UTC")).to eq(0)
+    end
+
+    it "is case-insensitive for UTC" do
+      expect(described_class.utc_offset_for("utc")).to eq(0)
+    end
+
+    it "parses positive fixed offset +05:30" do
+      expect(described_class.utc_offset_for("+05:30")).to eq(5 * 3600 + 30 * 60)
+    end
+
+    it "parses negative fixed offset -04:00" do
+      expect(described_class.utc_offset_for("-04:00")).to eq(-4 * 3600)
+    end
+
+    it "parses +00:00 as zero" do
+      expect(described_class.utc_offset_for("+00:00")).to eq(0)
+    end
+
+    it "parses single-digit hour offset +5:00" do
+      expect(described_class.utc_offset_for("+5:00")).to eq(5 * 3600)
+    end
+  end
+
+  describe ".apply" do
+    it "creates a Time with the specified offset" do
+      base = Time.new(2026, 6, 15, 12, 30, 0, 0)
+      result = described_class.apply(base, 3600)
+      expect(result.utc_offset).to eq(3600)
+      expect(result.hour).to eq(12)
+      expect(result.min).to eq(30)
+    end
+
+    it "preserves all time components" do
+      base = Time.new(2026, 12, 25, 23, 59, 45, 0)
+      result = described_class.apply(base, -18_000)
+      expect(result.year).to eq(2026)
+      expect(result.month).to eq(12)
+      expect(result.day).to eq(25)
+      expect(result.hour).to eq(23)
+      expect(result.min).to eq(59)
+      expect(result.sec).to eq(45)
+    end
+
+    it "applies zero offset correctly" do
+      base = Time.new(2026, 1, 1, 0, 0, 0, 0)
+      result = described_class.apply(base, 0)
+      expect(result.utc_offset).to eq(0)
+      expect(result.hour).to eq(0)
+    end
+
+    it "applies negative offset correctly" do
+      base = Time.new(2026, 7, 4, 18, 0, 0, 0)
+      result = described_class.apply(base, -5 * 3600)
+      expect(result.utc_offset).to eq(-18_000)
+      expect(result.hour).to eq(18)
     end
   end
 end
@@ -429,6 +714,57 @@ RSpec.describe Philiprehberger::CronKit::Scheduler do
     it "accepts @daily alias" do
       scheduler.every("@daily", name: "daily-job") { nil }
       expect(scheduler.job_names).to eq(["daily-job"])
+    end
+  end
+
+  describe "#every chainability" do
+    it "returns self to allow method chaining" do
+      result = scheduler.every("* * * * *", name: "a") { nil }
+      expect(result).to equal(scheduler)
+    end
+  end
+
+  describe "#every with Expression object" do
+    it "accepts a pre-built Expression instead of a string" do
+      expr = Philiprehberger::CronKit::Expression.new("*/10 * * * *")
+      scheduler.every(expr, name: "pre-built") { nil }
+      expect(scheduler.job_names).to eq(["pre-built"])
+    end
+  end
+
+  describe "#start and #stop lifecycle" do
+    it "reports running? as true after start" do
+      scheduler.start
+      expect(scheduler.running?).to be true
+    end
+
+    it "reports running? as false after stop" do
+      scheduler.start
+      scheduler.stop
+      expect(scheduler.running?).to be false
+    end
+
+    it "is idempotent — calling start twice returns self without error" do
+      result1 = scheduler.start
+      result2 = scheduler.start
+      expect(result1).to equal(scheduler)
+      expect(result2).to equal(scheduler)
+      expect(scheduler.running?).to be true
+    end
+  end
+
+  describe "#next_runs with no jobs" do
+    it "returns an empty hash" do
+      expect(scheduler.next_runs).to eq({})
+    end
+  end
+
+  describe "#remove leaves other jobs intact" do
+    it "only removes the targeted job" do
+      scheduler.every("* * * * *", name: "keep") { nil }
+      scheduler.every("* * * * *", name: "drop") { nil }
+      scheduler.remove("drop")
+      expect(scheduler.job_names).to eq(["keep"])
     end
   end
 end
