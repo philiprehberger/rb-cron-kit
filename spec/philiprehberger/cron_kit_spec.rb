@@ -326,35 +326,51 @@ RSpec.describe Philiprehberger::CronKit::Expression do
     end
 
     it "raises ParseError for step of zero" do
-      expect { described_class.new("*/0 * * * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /step must be > 0/)
+      expect do
+        described_class.new("*/0 * * * *")
+      end.to raise_error(Philiprehberger::CronKit::ParseError, /step must be > 0/)
     end
 
     it "raises ParseError for zero step in range-step" do
-      expect { described_class.new("1-10/0 * * * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /step must be > 0/)
+      expect do
+        described_class.new("1-10/0 * * * *")
+      end.to raise_error(Philiprehberger::CronKit::ParseError, /step must be > 0/)
     end
 
     it "raises ParseError for out-of-range low value in range" do
-      expect { described_class.new("* * 0-15 * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+      expect do
+        described_class.new("* * 0-15 * *")
+      end.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
     end
 
     it "raises ParseError for out-of-range high value in range" do
-      expect { described_class.new("* * 1-32 * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+      expect do
+        described_class.new("* * 1-32 * *")
+      end.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
     end
 
     it "raises ParseError for hour value of 24" do
-      expect { described_class.new("0 24 * * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+      expect do
+        described_class.new("0 24 * * *")
+      end.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
     end
 
     it "raises ParseError for month value of 0" do
-      expect { described_class.new("0 0 1 0 *") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+      expect do
+        described_class.new("0 0 1 0 *")
+      end.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
     end
 
     it "raises ParseError for month value of 13" do
-      expect { described_class.new("0 0 1 13 *") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+      expect do
+        described_class.new("0 0 1 13 *")
+      end.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
     end
 
     it "raises ParseError for day-of-week value of 7" do
-      expect { described_class.new("0 0 * * 7") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+      expect do
+        described_class.new("0 0 * * 7")
+      end.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
     end
 
     it "raises ParseError for an empty string" do
@@ -378,19 +394,27 @@ RSpec.describe Philiprehberger::CronKit::Expression do
     end
 
     it "raises ParseError for inverted range in range-step" do
-      expect { described_class.new("10-5/2 * * * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /low > high/)
+      expect do
+        described_class.new("10-5/2 * * * *")
+      end.to raise_error(Philiprehberger::CronKit::ParseError, /low > high/)
     end
 
     it "raises ParseError for out-of-range values in range-step" do
-      expect { described_class.new("0-60/5 * * * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+      expect do
+        described_class.new("0-60/5 * * * *")
+      end.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
     end
 
     it "raises ParseError for day-of-month value of 0" do
-      expect { described_class.new("0 0 0 * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+      expect do
+        described_class.new("0 0 0 * *")
+      end.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
     end
 
     it "raises ParseError for minute value of 60 in a list" do
-      expect { described_class.new("0,60 * * * *") }.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
+      expect do
+        described_class.new("0,60 * * * *")
+      end.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
     end
 
     it "parses full day-of-week range 0-6" do
@@ -532,7 +556,7 @@ RSpec.describe Philiprehberger::CronKit::Timezone do
     end
 
     it "parses positive fixed offset +05:30" do
-      expect(described_class.utc_offset_for("+05:30")).to eq(5 * 3600 + 30 * 60)
+      expect(described_class.utc_offset_for("+05:30")).to eq((5 * 3600) + (30 * 60))
     end
 
     it "parses negative fixed offset -04:00" do
