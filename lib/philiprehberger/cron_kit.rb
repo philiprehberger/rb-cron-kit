@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require_relative "cron_kit/version"
-require_relative "cron_kit/aliases"
-require_relative "cron_kit/timezone"
-require_relative "cron_kit/parser"
-require_relative "cron_kit/expression"
-require_relative "cron_kit/timeout_handler"
-require_relative "cron_kit/scheduler"
+require_relative 'cron_kit/version'
+require_relative 'cron_kit/aliases'
+require_relative 'cron_kit/timezone'
+require_relative 'cron_kit/parser'
+require_relative 'cron_kit/expression'
+require_relative 'cron_kit/timeout_handler'
+require_relative 'cron_kit/scheduler'
 
 module Philiprehberger
   module CronKit
