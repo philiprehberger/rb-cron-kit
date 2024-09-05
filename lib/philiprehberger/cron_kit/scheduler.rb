@@ -13,6 +13,18 @@ module Philiprehberger
         @mutex = Mutex.new
         @thread = nil
         @running = false
+        @on_error = nil
+        @running_threads = []
+      end
+
+      def on_error(&block)
+        return @on_error unless block
+
+        @on_error = block
+      end
+
+      def running_jobs
+        @mutex.synchronize { @running_threads.count(&:alive?) }
       end
 
       def every(expression, name: nil, timeout: nil, &block)
@@ -88,10 +100,13 @@ module Philiprehberger
         threads = jobs.filter_map do |job|
           next unless job.expression.match?(now)
 
-          start_job_thread(job, now)
+          thread = start_job_thread(job, now)
+          @mutex.synchronize { @running_threads << thread }
+          thread
         end
 
         threads.each { |t| t.join(30) }
+        @mutex.synchronize { @running_threads.select!(&:alive?) }
       end
 
       def sleep_until_next_minute

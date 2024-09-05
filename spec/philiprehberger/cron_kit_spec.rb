@@ -791,4 +791,74 @@ RSpec.describe Philiprehberger::CronKit::Scheduler do
       expect(scheduler.job_names).to eq(['keep'])
     end
   end
+
+  describe '#on_error' do
+    it 'invokes the callback when a job raises' do
+      captured_error = nil
+      captured_job = nil
+      expr = Philiprehberger::CronKit::Expression.new('* * * * *')
+
+      scheduler.on_error do |job, error|
+        captured_job = job
+        captured_error = error
+      end
+
+      scheduler.every(expr, name: 'broken') { raise StandardError, 'test error' }
+      scheduler.send(:tick)
+
+      expect(captured_error).to be_a(StandardError)
+      expect(captured_error.message).to eq('test error')
+      expect(captured_job.name).to eq('broken')
+    end
+
+    it 'returns the callback when called without a block' do
+      blk = proc { |_j, _e| }
+      scheduler.on_error(&blk)
+      expect(scheduler.on_error).to eq(blk)
+    end
+  end
+
+  describe '#running_jobs' do
+    it 'returns the count of currently executing job threads' do
+      started = Queue.new
+      finish = Queue.new
+      expr = Philiprehberger::CronKit::Expression.new('* * * * *')
+
+      scheduler.every(expr, name: 'slow') do
+        started << :go
+        finish.pop
+      end
+
+      thread = Thread.new { scheduler.send(:tick) }
+      started.pop # wait until the job has started
+
+      expect(scheduler.running_jobs).to eq(1)
+
+      finish << :done
+      thread.join(5)
+
+      expect(scheduler.running_jobs).to eq(0)
+    end
+  end
+
+  describe 'graceful timeout' do
+    it 'gives ensure blocks a chance to run before hard-killing' do
+      ensure_ran = Queue.new
+      expr = Philiprehberger::CronKit::Expression.new('* * * * *')
+
+      scheduler.every(expr, name: 'stuck', timeout: 0.1) do
+        sleep 10
+      ensure
+        ensure_ran << :cleaned_up
+      end
+
+      scheduler.send(:tick)
+      result = begin
+        ensure_ran.pop(timeout: 5)
+      rescue StandardError
+        nil
+      end
+      expect(result).to eq(:cleaned_up)
+    end
+  end
 end

@@ -115,7 +115,7 @@ scheduler.stop
 
 ### Job Timeout
 
-Kill jobs that exceed a time limit (in seconds):
+Kill jobs that exceed a time limit (in seconds). Timed-out jobs receive a `Timeout::Error` first, giving `ensure` blocks a chance to run before the thread is hard-killed.
 
 ```ruby
 scheduler = Philiprehberger::CronKit.new
@@ -123,6 +123,30 @@ scheduler = Philiprehberger::CronKit.new
 scheduler.every("*/5 * * * *", timeout: 30) do
   perform_work  # killed if it takes longer than 30 seconds
 end
+```
+
+### Error Handling
+
+Register a callback to handle job failures:
+
+```ruby
+scheduler = Philiprehberger::CronKit.new
+
+scheduler.on_error do |job, error|
+  puts "Job #{job.name} failed: #{error.message}"
+end
+
+scheduler.every("* * * * *", name: "risky") do
+  might_fail
+end
+```
+
+### Active Job Count
+
+Check how many jobs are currently executing:
+
+```ruby
+scheduler.running_jobs # => 2
 ```
 
 ### Named Jobs
@@ -179,9 +203,11 @@ scheduler.next_runs(from: Time.now)
 | `Expression#to_s` | Return the original expression string |
 | `Expression#timezone` | Return the configured timezone (or nil) |
 | `Scheduler#every(expression, name: nil, timeout: nil, &block)` | Register a cron job |
+| `Scheduler#on_error(&block)` | Register a callback for job failures |
 | `Scheduler#job_names` | List registered job names |
 | `Scheduler#remove(name)` | Remove a job by name |
 | `Scheduler#next_runs(from:)` | Hash of job names to their next scheduled time |
+| `Scheduler#running_jobs` | Count of currently executing job threads |
 | `Scheduler#start` | Start the scheduler in a background thread |
 | `Scheduler#stop` | Stop the scheduler |
 | `Scheduler#running?` | Check if the scheduler is running |
