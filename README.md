@@ -195,6 +195,7 @@ scheduler.next_runs(from: Time.now)
 | Method | Description |
 |--------|-------------|
 | `Philiprehberger::CronKit.parse(expression, timezone: nil)` | Parse a cron expression, returns `Expression` |
+| `Philiprehberger::CronKit.valid?(expression, timezone: nil)` | Return true if the expression parses without error |
 | `Philiprehberger::CronKit.new` | Create a new `Scheduler` |
 | `Expression#match?(time)` | Check if a Time matches the expression |
 | `Expression#next_at(from:)` | Find the next matching Time |
