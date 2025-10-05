@@ -6,7 +6,7 @@ module Philiprehberger
     class Scheduler
       include TimeoutHandler
 
-      Job = Struct.new(:expression, :block, :name, :timeout, keyword_init: true)
+      Job = Struct.new(:expression, :block, :name, :timeout, :overlap, keyword_init: true)
 
       def initialize
         @jobs = []
@@ -15,6 +15,7 @@ module Philiprehberger
         @running = false
         @on_error = nil
         @running_threads = []
+        @job_threads = {}
       end
 
       def on_error(&block)
@@ -27,11 +28,11 @@ module Philiprehberger
         @mutex.synchronize { @running_threads.count(&:alive?) }
       end
 
-      def every(expression, name: nil, timeout: nil, &block)
+      def every(expression, name: nil, timeout: nil, overlap: true, &block)
         expr = expression.is_a?(Expression) ? expression : Expression.new(expression)
 
         @mutex.synchronize do
-          @jobs << Job.new(expression: expr, block: block, name: name, timeout: timeout)
+          @jobs << Job.new(expression: expr, block: block, name: name, timeout: timeout, overlap: overlap)
         end
 
         self
@@ -99,14 +100,30 @@ module Philiprehberger
 
         threads = jobs.filter_map do |job|
           next unless job.expression.match?(now)
+          next if skip_overlapping?(job)
 
           thread = start_job_thread(job, now)
-          @mutex.synchronize { @running_threads << thread }
+          @mutex.synchronize do
+            @running_threads << thread
+            @job_threads[job.object_id] = thread
+          end
           thread
         end
 
         threads.each { |t| t.join(30) }
-        @mutex.synchronize { @running_threads.select!(&:alive?) }
+        @mutex.synchronize do
+          @running_threads.select!(&:alive?)
+          @job_threads.select! { |_, t| t.alive? }
+        end
+      end
+
+      def skip_overlapping?(job)
+        return false if job.overlap
+
+        @mutex.synchronize do
+          thread = @job_threads[job.object_id]
+          thread&.alive? || false
+        end
       end
 
       def sleep_until_next_minute
