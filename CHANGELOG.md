@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-04-15
+
+### Fixed
+- Correct homepage URL in gemspec to use repo-style slug (`philiprehberger-cron-kit`)
+
 ## [0.5.0] - 2026-04-12
 
 ### Added
