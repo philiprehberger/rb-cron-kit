@@ -58,9 +58,7 @@ module Philiprehberger
       def parse(expression)
         parts = expression.split(/\s+/)
 
-        unless parts.length == 5
-          raise ParseError, "expected 5 fields, got #{parts.length}: #{expression.inspect}"
-        end
+        raise ParseError, "expected 5 fields, got #{parts.length}: #{expression.inspect}" unless parts.length == 5
 
         parts.each_with_index.map do |part, index|
           parse_field(part, FIELD_RANGES[index], FIELD_NAMES[index])
@@ -78,29 +76,45 @@ module Philiprehberger
         case token
         when "*"
           range.to_a
-        when /\A\*\/(\d+)\z/
-          step = Regexp.last_match(1).to_i
-          validate_step!(step, name)
-          range.step(step).to_a
+        when %r{\A\*/(\d+)\z}
+          parse_step_token(range, name)
         when /\A(\d+)-(\d+)\z/
-          low = Regexp.last_match(1).to_i
-          high = Regexp.last_match(2).to_i
-          validate_range!(low, high, range, name)
-          (low..high).to_a
-        when /\A(\d+)-(\d+)\/(\d+)\z/
-          low = Regexp.last_match(1).to_i
-          high = Regexp.last_match(2).to_i
-          step = Regexp.last_match(3).to_i
-          validate_range!(low, high, range, name)
-          validate_step!(step, name)
-          (low..high).step(step).to_a
+          parse_range_token(range, name)
+        when %r{\A(\d+)-(\d+)/(\d+)\z}
+          parse_range_step_token(range, name)
         when /\A\d+\z/
-          value = token.to_i
-          validate_value!(value, range, name)
-          [value]
+          parse_value_token(token, range, name)
         else
           raise ParseError, "invalid token #{token.inspect} in #{name} field"
         end
+      end
+
+      def parse_step_token(range, name)
+        step = Regexp.last_match(1).to_i
+        validate_step!(step, name)
+        range.step(step).to_a
+      end
+
+      def parse_range_token(range, name)
+        low = Regexp.last_match(1).to_i
+        high = Regexp.last_match(2).to_i
+        validate_range!(low, high, range, name)
+        (low..high).to_a
+      end
+
+      def parse_range_step_token(range, name)
+        low = Regexp.last_match(1).to_i
+        high = Regexp.last_match(2).to_i
+        step = Regexp.last_match(3).to_i
+        validate_range!(low, high, range, name)
+        validate_step!(step, name)
+        (low..high).step(step).to_a
+      end
+
+      def parse_value_token(token, range, name)
+        value = token.to_i
+        validate_value!(value, range, name)
+        [value]
       end
 
       def validate_value!(value, range, name)
