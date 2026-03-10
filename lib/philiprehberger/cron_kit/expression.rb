@@ -100,7 +100,9 @@ module Philiprehberger
         m = token.match(%r{\A(\d+)-(\d+)/(\d+)\z})
         return unless m
 
-        low, high, step = m[1].to_i, m[2].to_i, m[3].to_i
+        low = m[1].to_i
+        high = m[2].to_i
+        step = m[3].to_i
         validate_range!(low, high, range, name)
         validate_step!(step, name)
         (low..high).step(step).to_a
@@ -110,7 +112,8 @@ module Philiprehberger
         m = token.match(/\A(\d+)-(\d+)\z/)
         return unless m
 
-        low, high = m[1].to_i, m[2].to_i
+        low = m[1].to_i
+        high = m[2].to_i
         validate_range!(low, high, range, name)
         (low..high).to_a
       end
