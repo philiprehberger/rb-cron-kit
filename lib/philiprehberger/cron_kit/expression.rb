@@ -72,16 +72,17 @@ module Philiprehberger
         values.uniq.sort
       end
 
-      def parse_token(token, range, name)
+      def parse_token(token, range, name) # rubocop:disable Metrics/MethodLength
         case token
         when "*"
           range.to_a
         when %r{\A\*/(\d+)\z}
-          parse_step_token($1.to_i, range, name)
+          parse_step_token(Regexp.last_match(1).to_i, range, name)
         when /\A(\d+)-(\d+)\z/
-          parse_range_token($1.to_i, $2.to_i, range, name)
+          parse_range_token(Regexp.last_match(1).to_i, Regexp.last_match(2).to_i, range, name)
         when %r{\A(\d+)-(\d+)/(\d+)\z}
-          parse_range_step_token($1.to_i, $2.to_i, $3.to_i, range, name)
+          parse_range_step_token(Regexp.last_match(1).to_i, Regexp.last_match(2).to_i,
+                                 Regexp.last_match(3).to_i, range, name)
         when /\A\d+\z/
           parse_value_token(token, range, name)
         else
