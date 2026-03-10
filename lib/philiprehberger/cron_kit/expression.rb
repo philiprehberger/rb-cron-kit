@@ -91,46 +91,33 @@ module Philiprehberger
         m = token.match(%r{\A\*/(\d+)\z})
         return unless m
 
-        parse_step_token(m[1].to_i, range, name)
+        step = m[1].to_i
+        validate_step!(step, name)
+        range.step(step).to_a
       end
 
       def try_range_step(token, range, name)
         m = token.match(%r{\A(\d+)-(\d+)/(\d+)\z})
         return unless m
 
-        parse_range_step_token(m[1].to_i, m[2].to_i, m[3].to_i, range, name)
+        low, high, step = m[1].to_i, m[2].to_i, m[3].to_i
+        validate_range!(low, high, range, name)
+        validate_step!(step, name)
+        (low..high).step(step).to_a
       end
 
       def try_range(token, range, name)
         m = token.match(/\A(\d+)-(\d+)\z/)
         return unless m
 
-        parse_range_token(m[1].to_i, m[2].to_i, range, name)
+        low, high = m[1].to_i, m[2].to_i
+        validate_range!(low, high, range, name)
+        (low..high).to_a
       end
 
       def try_value(token, range, name)
         return unless token.match?(/\A\d+\z/)
 
-        parse_value_token(token, range, name)
-      end
-
-      def parse_step_token(step, range, name)
-        validate_step!(step, name)
-        range.step(step).to_a
-      end
-
-      def parse_range_token(low, high, range, name)
-        validate_range!(low, high, range, name)
-        (low..high).to_a
-      end
-
-      def parse_range_step_token(low, high, step, range, name)
-        validate_range!(low, high, range, name)
-        validate_step!(step, name)
-        (low..high).step(step).to_a
-      end
-
-      def parse_value_token(token, range, name)
         value = token.to_i
         validate_value!(value, range, name)
         [value]
