@@ -55,6 +55,26 @@ scheduler.running? # => true
 scheduler.stop
 ```
 
+### Named Jobs
+
+```ruby
+scheduler = Philiprehberger::CronKit.new
+
+scheduler.every("0 9 * * 1-5", name: "morning-report") do
+  generate_report
+end
+
+scheduler.job_names     # => ["morning-report"]
+scheduler.remove("morning-report")
+```
+
+### Inspecting Next Runs
+
+```ruby
+scheduler.next_runs(from: Time.now)
+# => { "morning-report" => 2026-03-13 09:00:00 ... }
+```
+
 ### Supported Syntax
 
 | Token   | Example    | Description               |
@@ -84,7 +104,10 @@ scheduler.stop
 | `Expression#match?(time)` | Check if a Time matches the expression |
 | `Expression#next_at(from:)` | Find the next matching Time |
 | `Expression#to_s` | Return the original expression string |
-| `Scheduler#every(expression, &block)` | Register a cron job |
+| `Scheduler#every(expression, name: nil, &block)` | Register a cron job |
+| `Scheduler#job_names` | List registered job names |
+| `Scheduler#remove(name)` | Remove a job by name |
+| `Scheduler#next_runs(from:)` | Hash of job names to their next scheduled time |
 | `Scheduler#start` | Start the scheduler in a background thread |
 | `Scheduler#stop` | Stop the scheduler |
 | `Scheduler#running?` | Check if the scheduler is running |
