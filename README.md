@@ -2,8 +2,13 @@
 
 [![Gem Version](https://badge.fury.io/rb/philiprehberger-cron_kit.svg)](https://badge.fury.io/rb/philiprehberger-cron_kit)
 [![CI](https://github.com/philiprehberger/rb-cron-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/philiprehberger/rb-cron-kit/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/philiprehberger/rb-cron-kit)](LICENSE)
 
 Cron expression parser and scheduler for Ruby. Zero dependencies.
+
+## Requirements
+
+- Ruby >= 3.1
 
 ## Installation
 
@@ -111,6 +116,15 @@ scheduler.next_runs(from: Time.now)
 | `Scheduler#start` | Start the scheduler in a background thread |
 | `Scheduler#stop` | Stop the scheduler |
 | `Scheduler#running?` | Check if the scheduler is running |
+
+
+## Development
+
+```bash
+bundle install
+bundle exec rspec
+bundle exec rubocop
+```
 
 ## License
 
