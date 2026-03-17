@@ -22,10 +22,10 @@ module Philiprehberger
 
       def execute_with_timeout(job, time)
         worker = Thread.new { job.block.call(time) }
-        unless worker.join(job.timeout)
-          worker.kill
-          worker.join(1)
-        end
+        return if worker.join(job.timeout)
+
+        worker.kill
+        worker.join(1)
       end
     end
   end
