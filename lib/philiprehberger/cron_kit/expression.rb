@@ -10,43 +10,43 @@ module Philiprehberger
     # month (1-12), day-of-week (0-6, Sunday = 0).
     #
     # Supported syntax: *, specific values, ranges (1-5), steps (*/5), lists (1,3,5).
+    # Non-standard aliases: @hourly, @daily, @weekly, @monthly, @yearly, @annually.
     class Expression
-      FIELD_RANGES = [
-        0..59,  # minute
-        0..23,  # hour
-        1..31,  # day of month
-        1..12,  # month
-        0..6    # day of week
-      ].freeze
+      include Parser
 
-      FIELD_NAMES = %w[minute hour day-of-month month day-of-week].freeze
+      attr_reader :raw, :timezone
 
-      attr_reader :raw
-
-      def initialize(expression)
-        @raw = expression.to_s.strip
-        @fields = parse(@raw)
+      def initialize(expression, timezone: nil)
+        @raw = Aliases.expand(expression.to_s.strip)
+        @timezone = timezone
+        @utc_offset = Timezone.utc_offset_for(timezone)
+        @fields = parse_expression(@raw)
       end
 
       def match?(time)
-        time = time.to_time if time.respond_to?(:to_time)
-
+        time = coerce_time(time)
         values = [time.min, time.hour, time.day, time.month, time.wday]
         @fields.each_with_index.all? { |set, i| set.include?(values[i]) }
       end
 
       def next_at(from: Time.now)
-        time = Time.new(from.year, from.month, from.day, from.hour, from.min, 0, from.utc_offset)
-        time += 60 # start from the next minute
+        time = start_time(from, 60)
+        scan_forward(time)
+      end
 
-        # Safety limit: scan up to 4 years of minutes
-        (4 * 366 * 24 * 60).times do
-          return time if match?(time)
-
-          time += 60
+      def next_runs(count: 5, from: Time.now)
+        result = []
+        cursor = from
+        count.times do
+          cursor = next_at(from: cursor)
+          result << cursor
         end
+        result
+      end
 
-        raise "no matching time found within 4 years"
+      def previous_run(from: Time.now)
+        time = start_time_back(from)
+        scan_backward(time)
       end
 
       def to_s
@@ -55,92 +55,46 @@ module Philiprehberger
 
       private
 
-      def parse(expression)
-        parts = expression.split(/\s+/)
+      def coerce_time(time)
+        time = time.to_time if time.respond_to?(:to_time)
+        @utc_offset ? Timezone.apply(time.getutc + @utc_offset, @utc_offset) : time
+      end
 
-        raise ParseError, "expected 5 fields, got #{parts.length}: #{expression.inspect}" unless parts.length == 5
+      def start_time(from, offset_seconds)
+        base = @utc_offset ? from.getutc : from
+        time = Time.new(base.year, base.month, base.day, base.hour, base.min, 0, base.utc_offset)
+        time += offset_seconds
+        @utc_offset ? Timezone.apply(time.getutc + @utc_offset, @utc_offset) : time
+      end
 
-        parts.each_with_index.map do |part, index|
-          parse_field(part, FIELD_RANGES[index], FIELD_NAMES[index])
+      def start_time_back(from)
+        base = @utc_offset ? from.getutc : from
+        time = Time.new(base.year, base.month, base.day, base.hour, base.min, 0, base.utc_offset)
+        time -= 60
+        @utc_offset ? Timezone.apply(time.getutc + @utc_offset, @utc_offset) : time
+      end
+
+      def scan_forward(time)
+        (4 * 366 * 24 * 60).times do
+          return time if field_match?(time)
+
+          time += 60
         end
+        raise "no matching time found within 4 years"
       end
 
-      def parse_field(field, range, name)
-        values = field.split(",").flat_map { |token| parse_token(token, range, name) }
-        raise ParseError, "empty field for #{name}" if values.empty?
+      def scan_backward(time)
+        (4 * 366 * 24 * 60).times do
+          return time if field_match?(time)
 
-        values.uniq.sort
+          time -= 60
+        end
+        raise "no matching time found within 4 years"
       end
 
-      def parse_token(token, range, name)
-        try_wildcard(token, range) ||
-          try_step(token, range, name) ||
-          try_range_step(token, range, name) ||
-          try_range(token, range, name) ||
-          try_value(token, range, name) ||
-          raise(ParseError, "invalid token #{token.inspect} in #{name} field")
-      end
-
-      def try_wildcard(token, range)
-        return unless token == "*"
-
-        range.to_a
-      end
-
-      def try_step(token, range, name)
-        m = token.match(%r{\A\*/(\d+)\z})
-        return unless m
-
-        step = m[1].to_i
-        validate_step!(step, name)
-        range.step(step).to_a
-      end
-
-      def try_range_step(token, range, name)
-        m = token.match(%r{\A(\d+)-(\d+)/(\d+)\z})
-        return unless m
-
-        low = m[1].to_i
-        high = m[2].to_i
-        step = m[3].to_i
-        validate_range!(low, high, range, name)
-        validate_step!(step, name)
-        (low..high).step(step).to_a
-      end
-
-      def try_range(token, range, name)
-        m = token.match(/\A(\d+)-(\d+)\z/)
-        return unless m
-
-        low = m[1].to_i
-        high = m[2].to_i
-        validate_range!(low, high, range, name)
-        (low..high).to_a
-      end
-
-      def try_value(token, range, name)
-        return unless token.match?(/\A\d+\z/)
-
-        value = token.to_i
-        validate_value!(value, range, name)
-        [value]
-      end
-
-      def validate_value!(value, range, name)
-        return if range.include?(value)
-
-        raise ParseError, "#{name} value #{value} outside allowed range #{range}"
-      end
-
-      def validate_range!(low, high, range, name)
-        raise ParseError, "invalid range #{low}-#{high} in #{name} field: low > high" if low > high
-
-        validate_value!(low, range, name)
-        validate_value!(high, range, name)
-      end
-
-      def validate_step!(step, name)
-        raise ParseError, "step must be > 0 in #{name} field" if step <= 0
+      def field_match?(time)
+        values = [time.min, time.hour, time.day, time.month, time.wday]
+        @fields.each_with_index.all? { |set, i| set.include?(values[i]) }
       end
     end
   end

@@ -42,6 +42,59 @@ expr.next_at(from: Time.new(2026, 3, 10, 12, 13))
 expr.to_s # => "*/5 * * * *"
 ```
 
+### Timezone Support
+
+Evaluate cron expressions in a specific timezone. Uses only stdlib — no external gems required.
+
+```ruby
+# Fixed UTC offset
+expr = Philiprehberger::CronKit.parse("0 9 * * *", timezone: "+05:30")
+
+# POSIX timezone name (resolved via ENV["TZ"])
+expr = Philiprehberger::CronKit.parse("0 9 * * *", timezone: "US/Eastern")
+
+# UTC shorthand
+expr = Philiprehberger::CronKit.parse("0 9 * * *", timezone: "UTC")
+
+expr.match?(some_time)       # evaluated in the configured timezone
+expr.next_at(from: Time.now) # next match in that timezone
+```
+
+### Next Runs Preview
+
+Get the next N upcoming execution times from a given start:
+
+```ruby
+expr = Philiprehberger::CronKit.parse("0 * * * *")
+
+expr.next_runs(count: 5, from: Time.now)
+# => [2026-03-17 14:00, 2026-03-17 15:00, 2026-03-17 16:00, ...]
+```
+
+### Previous Run
+
+Find the most recent past match:
+
+```ruby
+expr = Philiprehberger::CronKit.parse("0 * * * *")
+
+expr.previous_run(from: Time.now)
+# => 2026-03-17 13:00:00
+```
+
+### Non-Standard Aliases
+
+Use convenient shorthand aliases instead of full cron expressions:
+
+```ruby
+Philiprehberger::CronKit.parse("@hourly")   # => "0 * * * *"
+Philiprehberger::CronKit.parse("@daily")    # => "0 0 * * *"
+Philiprehberger::CronKit.parse("@weekly")   # => "0 0 * * 0"
+Philiprehberger::CronKit.parse("@monthly")  # => "0 0 1 * *"
+Philiprehberger::CronKit.parse("@yearly")   # => "0 0 1 1 *"
+Philiprehberger::CronKit.parse("@annually") # => "0 0 1 1 *"
+```
+
 ### Scheduling Jobs
 
 ```ruby
@@ -58,6 +111,18 @@ end
 scheduler.start   # runs in a background thread
 scheduler.running? # => true
 scheduler.stop
+```
+
+### Job Timeout
+
+Kill jobs that exceed a time limit (in seconds):
+
+```ruby
+scheduler = Philiprehberger::CronKit.new
+
+scheduler.every("*/5 * * * *", timeout: 30) do
+  perform_work  # killed if it takes longer than 30 seconds
+end
 ```
 
 ### Named Jobs
@@ -89,6 +154,7 @@ scheduler.next_runs(from: Time.now)
 | Range   | `1-5`      | Values from 1 through 5   |
 | Step    | `*/5`      | Every 5th value           |
 | List    | `1,3,5`   | Values 1, 3, and 5        |
+| Alias   | `@daily`   | Non-standard shorthand    |
 
 ### Fields
 
@@ -104,12 +170,15 @@ scheduler.next_runs(from: Time.now)
 
 | Method | Description |
 |--------|-------------|
-| `Philiprehberger::CronKit.parse(expression)` | Parse a cron expression, returns `Expression` |
+| `Philiprehberger::CronKit.parse(expression, timezone: nil)` | Parse a cron expression, returns `Expression` |
 | `Philiprehberger::CronKit.new` | Create a new `Scheduler` |
 | `Expression#match?(time)` | Check if a Time matches the expression |
 | `Expression#next_at(from:)` | Find the next matching Time |
+| `Expression#next_runs(count: 5, from:)` | Return the next N matching times |
+| `Expression#previous_run(from:)` | Find the most recent past match |
 | `Expression#to_s` | Return the original expression string |
-| `Scheduler#every(expression, name: nil, &block)` | Register a cron job |
+| `Expression#timezone` | Return the configured timezone (or nil) |
+| `Scheduler#every(expression, name: nil, timeout: nil, &block)` | Register a cron job |
 | `Scheduler#job_names` | List registered job names |
 | `Scheduler#remove(name)` | Remove a job by name |
 | `Scheduler#next_runs(from:)` | Hash of job names to their next scheduled time |
