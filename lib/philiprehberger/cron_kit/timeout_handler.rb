@@ -15,11 +15,9 @@ module Philiprehberger
       end
 
       def run_with_timeout(job, time)
-        if job.timeout
-          execute_with_timeout(job, time)
-        else
-          job.block.call(time)
-        end
+        return job.block.call(time) unless job.timeout
+
+        execute_with_timeout(job, time)
       end
 
       def execute_with_timeout(job, time)
