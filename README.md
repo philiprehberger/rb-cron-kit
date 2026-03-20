@@ -1,6 +1,6 @@
 # philiprehberger-cron_kit
 
-[![Gem Version](https://badge.fury.io/rb/philiprehberger-cron_kit.svg)](https://badge.fury.io/rb/philiprehberger-cron_kit)
+[![Gem Version](https://badge.fury.io/rb/philiprehberger-cron_kit.svg)](https://rubygems.org/gems/philiprehberger-cron_kit)
 [![CI](https://github.com/philiprehberger/rb-cron-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/philiprehberger/rb-cron-kit/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/philiprehberger/rb-cron-kit)](LICENSE)
 

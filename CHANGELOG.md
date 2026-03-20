@@ -6,6 +6,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.2] - 2026-03-20
+
+### Fixed
+- Fix Gem Version badge URL in README
+
 ## [0.3.0] - 2026-03-17
 
 ### Added
