@@ -1,15 +1,23 @@
 # Changelog
 
-## 0.3.1
-
-- Fix RuboCop Style/StringLiterals violations in gemspec
-
 All notable changes to this project will be documented in this file.
+
+## [Unreleased]
+
+## [0.3.3] - 2026-03-21
+
+### Fixed
+- Standardize Installation section in README
 
 ## [0.3.2] - 2026-03-20
 
 ### Fixed
 - Fix Gem Version badge URL in README
+
+## [0.3.1] - 2026-03-18
+
+### Changed
+- Fix RuboCop Style/StringLiterals violations in gemspec
 
 ## [0.3.0] - 2026-03-17
 
@@ -24,8 +32,9 @@ All notable changes to this project will be documented in this file.
 - `Timezone` module for offset resolution (stdlib only)
 - `Parser` module extracted from `Expression` for field parsing logic
 
-## 0.2.1
+## [0.2.1] - 2026-03-17
 
+### Added
 - Add License badge to README
 - Add bug_tracker_uri to gemspec
 - Add Development section to README
