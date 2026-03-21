@@ -4,7 +4,7 @@
 [![Gem Version](https://badge.fury.io/rb/philiprehberger-cron_kit.svg)](https://rubygems.org/gems/philiprehberger-cron_kit)
 [![License](https://img.shields.io/github/license/philiprehberger/rb-cron-kit)](LICENSE)
 
-Cron expression parser and scheduler for Ruby. Zero dependencies.
+Cron expression parser and scheduler for Ruby
 
 ## Requirements
 
