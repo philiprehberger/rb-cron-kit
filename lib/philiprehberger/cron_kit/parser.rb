@@ -28,7 +28,7 @@ module Philiprehberger
       private
 
       def parse_field(field, range, name)
-        values = field.split(",").flat_map { |token| parse_token(token, range, name) }
+        values = field.split(',').flat_map { |token| parse_token(token, range, name) }
         raise ParseError, "empty field for #{name}" if values.empty?
 
         values.uniq.sort
@@ -44,7 +44,7 @@ module Philiprehberger
       end
 
       def try_wildcard(token, range)
-        return unless token == "*"
+        return unless token == '*'
 
         range.to_a
       end

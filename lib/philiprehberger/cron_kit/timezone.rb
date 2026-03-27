@@ -23,20 +23,20 @@ module Philiprehberger
         private
 
         def try_utc(timezone)
-          0 if timezone.upcase == "UTC"
+          0 if timezone.upcase == 'UTC'
         end
 
         def try_numeric_offset(timezone)
           m = timezone.match(/\A([+-])(\d{1,2}):(\d{2})\z/)
           return unless m
 
-          sign = m[1] == "+" ? 1 : -1
+          sign = m[1] == '+' ? 1 : -1
           sign * ((m[2].to_i * 3600) + (m[3].to_i * 60))
         end
 
         def probe_offset(timezone)
-          original_tz = ENV.fetch("TZ", nil)
-          ENV["TZ"] = timezone
+          original_tz = ENV.fetch('TZ', nil)
+          ENV['TZ'] = timezone
           offset = Time.now.utc_offset
           offset
         ensure
@@ -45,9 +45,9 @@ module Philiprehberger
 
         def restore_tz(original_tz)
           if original_tz
-            ENV["TZ"] = original_tz
+            ENV['TZ'] = original_tz
           else
-            ENV.delete("TZ")
+            ENV.delete('TZ')
           end
         end
       end
