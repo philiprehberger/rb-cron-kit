@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-04-05
+
+### Added
+- `Scheduler#on_error` callback for handling job failures
+- `Scheduler#running_jobs` method to inspect active job count
+- Graceful timeout: raises `Timeout::Error` before hard-killing timed-out jobs
+
 ## [0.3.10] - 2026-03-31
 
 ### Added
