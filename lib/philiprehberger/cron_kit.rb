@@ -20,5 +20,11 @@ module Philiprehberger
     def self.new
       Scheduler.new
     end
+
+    # Return true if the given string is a valid cron expression.
+    # Accepts the same syntax as `parse` (5-field expressions and aliases).
+    def self.valid?(expression, timezone: nil)
+      Expression.valid?(expression, timezone: timezone)
+    end
   end
 end

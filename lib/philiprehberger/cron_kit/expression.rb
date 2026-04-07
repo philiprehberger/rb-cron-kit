@@ -16,6 +16,15 @@ module Philiprehberger
 
       attr_reader :raw, :timezone
 
+      # Return true if the given expression parses without error.
+      # Provides a non-raising alternative to rescuing `ParseError`.
+      def self.valid?(expression, timezone: nil)
+        new(expression, timezone: timezone)
+        true
+      rescue ParseError, ArgumentError
+        false
+      end
+
       def initialize(expression, timezone: nil)
         @raw = Aliases.expand(expression.to_s.strip)
         @timezone = timezone
