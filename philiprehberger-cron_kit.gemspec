@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.authors = ['Philip Rehberger']
   spec.email = ['me@philiprehberger.com']
 
-  spec.summary = 'Cron expression parser and scheduler for Ruby'
+  spec.summary = 'Cron expression parser and scheduler'
   spec.description = 'A zero-dependency Ruby gem for parsing 5-field cron expressions and running ' \
                      'an in-process scheduler. Supports wildcards, ranges, steps, and lists.'
   spec.homepage = 'https://philiprehberger.com/open-source-packages/ruby/philiprehberger-cron_kit'
