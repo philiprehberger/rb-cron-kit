@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-04-12
+
+### Added
+- `Scheduler#every` accepts `overlap: false` to skip a job tick when the previous run is still active
+- Bug report template now requires Ruby version and gem version fields
+- Feature request template now includes alternatives considered field
+
+### Fixed
+- README Usage section structure: first example no longer wrapped in a subsection header
+- Bug report template placeholder for reproduction steps
+- Feature request template placeholder for proposed API
+
 ## [0.4.2] - 2026-04-08
 
 ### Changed

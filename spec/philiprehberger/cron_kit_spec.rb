@@ -841,6 +841,86 @@ RSpec.describe Philiprehberger::CronKit::Scheduler do
     end
   end
 
+  describe '#every with overlap: false' do
+    it 'skips execution when the previous run is still active' do
+      ran = Queue.new
+      started = Queue.new
+      finish = Queue.new
+      expr = Philiprehberger::CronKit::Expression.new('* * * * *')
+
+      scheduler.every(expr, name: 'slow', overlap: false) do
+        started << :go
+        finish.pop
+        ran << :ran
+      end
+
+      t1 = Thread.new { scheduler.send(:tick) }
+      started.pop
+
+      t2 = Thread.new { scheduler.send(:tick) }
+      t2.join(5)
+
+      finish << :done
+      t1.join(5)
+
+      count = 0
+      loop do
+        ran.pop(true)
+        count += 1
+      rescue ThreadError
+        break
+      end
+      expect(count).to eq(1)
+    end
+
+    it 'runs normally when previous run has completed' do
+      call_count = 0
+      mutex = Mutex.new
+      expr = Philiprehberger::CronKit::Expression.new('* * * * *')
+
+      scheduler.every(expr, name: 'fast', overlap: false) do
+        mutex.synchronize { call_count += 1 }
+      end
+
+      scheduler.send(:tick)
+      scheduler.send(:tick)
+
+      expect(call_count).to eq(2)
+    end
+
+    it 'allows overlap by default' do
+      started = Queue.new
+      finish = Queue.new
+      call_count = Queue.new
+      expr = Philiprehberger::CronKit::Expression.new('* * * * *')
+
+      scheduler.every(expr, name: 'default') do
+        call_count << :ran
+        started << :go
+        finish.pop
+      end
+
+      t1 = Thread.new { scheduler.send(:tick) }
+      started.pop
+
+      t2 = Thread.new { scheduler.send(:tick) }
+      started.pop
+
+      2.times { finish << :done }
+      t1.join(5)
+      t2.join(5)
+
+      count = 0
+      loop do
+        call_count.pop(true)
+        count += 1
+      rescue ThreadError
+        break
+      end
+      expect(count).to eq(2)
+    end
+  end
+
   describe 'graceful timeout' do
     it 'gives ensure blocks a chance to run before hard-killing' do
       ensure_ran = Queue.new

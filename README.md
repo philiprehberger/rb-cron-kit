@@ -26,8 +26,6 @@ gem install philiprehberger-cron_kit
 
 ## Usage
 
-### Parsing Expressions
-
 ```ruby
 require "philiprehberger/cron_kit"
 
@@ -112,6 +110,20 @@ scheduler.start   # runs in a background thread
 scheduler.running? # => true
 scheduler.stop
 ```
+
+### Overlap Prevention
+
+Skip a job's scheduled tick if the previous run is still active:
+
+```ruby
+scheduler = Philiprehberger::CronKit.new
+
+scheduler.every("*/5 * * * *", overlap: false) do
+  slow_work  # skipped if still running from previous tick
+end
+```
+
+By default, overlap is allowed (`overlap: true`).
 
 ### Job Timeout
 
@@ -203,7 +215,7 @@ scheduler.next_runs(from: Time.now)
 | `Expression#previous_run(from:)` | Find the most recent past match |
 | `Expression#to_s` | Return the original expression string |
 | `Expression#timezone` | Return the configured timezone (or nil) |
-| `Scheduler#every(expression, name: nil, timeout: nil, &block)` | Register a cron job |
+| `Scheduler#every(expression, name: nil, timeout: nil, overlap: true, &block)` | Register a cron job |
 | `Scheduler#on_error(&block)` | Register a callback for job failures |
 | `Scheduler#job_names` | List registered job names |
 | `Scheduler#remove(name)` | Remove a job by name |
