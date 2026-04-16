@@ -40,6 +40,23 @@ expr.next_at(from: Time.new(2026, 3, 10, 12, 13))
 expr.to_s # => "*/5 * * * *"
 ```
 
+### Matches Any
+
+Check whether any `Time` in an enumerable satisfies the expression. Short-circuits on the first match:
+
+```ruby
+expr = Philiprehberger::CronKit.parse("0 9 * * *")
+
+times = [
+  Time.new(2026, 3, 10, 8, 30),
+  Time.new(2026, 3, 10, 9, 0),
+  Time.new(2026, 3, 10, 10, 0)
+]
+
+expr.matches_any?(times) # => true
+expr.matches_any?([])    # => false
+```
+
 ### Timezone Support
 
 Evaluate cron expressions in a specific timezone. Uses only stdlib — no external gems required.
@@ -210,6 +227,7 @@ scheduler.next_runs(from: Time.now)
 | `Philiprehberger::CronKit.valid?(expression, timezone: nil)` | Return true if the expression parses without error |
 | `Philiprehberger::CronKit.new` | Create a new `Scheduler` |
 | `Expression#match?(time)` | Check if a Time matches the expression |
+| `Expression#matches_any?(times)` | Check if any Time in the enumerable matches the expression |
 | `Expression#next_at(from:)` | Find the next matching Time |
 | `Expression#next_runs(count: 5, from:)` | Return the next N matching times |
 | `Expression#previous_run(from:)` | Find the most recent past match |
