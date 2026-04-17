@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-04-16
+
+### Added
+- `Expression#matches_any?(times)` returns true if any `Time` in the given enumerable matches the expression, short-circuiting on the first match
+
 ## [0.5.1] - 2026-04-15
 
 ### Fixed

@@ -149,6 +149,58 @@ RSpec.describe Philiprehberger::CronKit::Expression do
     end
   end
 
+  describe '#matches_any?' do
+    it 'returns true when at least one time matches' do
+      expr = described_class.new('0 9 * * *')
+      times = [
+        Time.new(2026, 3, 10, 8, 30),
+        Time.new(2026, 3, 10, 9, 0),
+        Time.new(2026, 3, 10, 10, 0)
+      ]
+      expect(expr.matches_any?(times)).to be true
+    end
+
+    it 'returns false when no time matches' do
+      expr = described_class.new('0 9 * * *')
+      times = [
+        Time.new(2026, 3, 10, 8, 30),
+        Time.new(2026, 3, 10, 10, 0),
+        Time.new(2026, 3, 10, 11, 0)
+      ]
+      expect(expr.matches_any?(times)).to be false
+    end
+
+    it 'returns false on an empty enumerable' do
+      expr = described_class.new('* * * * *')
+      expect(expr.matches_any?([])).to be false
+    end
+
+    it 'accepts any enumerable (not just Array)' do
+      expr = described_class.new('30 * * * *')
+      enum = [Time.new(2026, 3, 10, 12, 30)].each
+      expect(expr.matches_any?(enum)).to be true
+    end
+
+    it 'short-circuits on the first match' do
+      expr = described_class.new('0 9 * * *')
+      inspected = []
+      times = [
+        Time.new(2026, 3, 10, 9, 0),
+        Time.new(2026, 3, 10, 10, 0),
+        Time.new(2026, 3, 10, 11, 0)
+      ]
+      enum = Enumerator.new do |y|
+        times.each do |t|
+          inspected << t
+          y << t
+        end
+      end
+
+      expect(expr.matches_any?(enum)).to be true
+      expect(inspected.length).to eq(1)
+    end
+  end
+
   describe '#next_at' do
     it 'finds the next matching minute' do
       expr = described_class.new('30 * * * *')

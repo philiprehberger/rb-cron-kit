@@ -38,6 +38,12 @@ module Philiprehberger
         @fields.each_with_index.all? { |set, i| set.include?(values[i]) }
       end
 
+      # Return true if any Time in the given enumerable matches the expression.
+      # Short-circuits on the first match.
+      def matches_any?(times)
+        times.any? { |time| match?(time) }
+      end
+
       def next_at(from: Time.now)
         time = start_time(from, 60)
         scan_forward(time)
