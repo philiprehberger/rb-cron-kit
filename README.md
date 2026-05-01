@@ -191,6 +191,23 @@ scheduler.job_names     # => ["morning-report"]
 scheduler.remove("morning-report")
 ```
 
+### Manual Trigger
+
+Trigger a registered job by name without restarting the scheduler — useful for testing
+or operator-driven re-runs.
+
+```ruby
+scheduler.every("0 9 * * 1-5", name: :morning_report, timeout: 30) do
+  generate_report
+end
+
+scheduler.run_now(:morning_report)  # => return value of the block
+scheduler.run_now(:missing)          # raises KeyError
+```
+
+`run_now` honors `timeout:` (raises `Timeout::Error`) and respects `overlap: false`
+(returns `nil` when the job is already running).
+
 ### Inspecting Next Runs
 
 ```ruby
@@ -237,6 +254,7 @@ scheduler.next_runs(from: Time.now)
 | `Scheduler#on_error(&block)` | Register a callback for job failures |
 | `Scheduler#job_names` | List registered job names |
 | `Scheduler#remove(name)` | Remove a job by name |
+| `Scheduler#run_now(name)` | Manually trigger a registered job; returns the block's value, raises `KeyError` for unknown names or `Timeout::Error` on timeout |
 | `Scheduler#next_runs(from:)` | Hash of job names to their next scheduled time |
 | `Scheduler#running_jobs` | Count of currently executing job threads |
 | `Scheduler#start` | Start the scheduler in a background thread |

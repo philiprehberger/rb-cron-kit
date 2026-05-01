@@ -50,6 +50,24 @@ module Philiprehberger
         end
       end
 
+      # Manually trigger a registered job by name.
+      #
+      # Reuses the standard execution path (timeout + overlap-skip), but runs
+      # synchronously so the caller can capture the return value. Useful for
+      # testing and operator-driven re-runs.
+      #
+      # @param name [Symbol, String] the job name to trigger
+      # @return [Object, nil] the block's return value, or `nil` when skipped due to `overlap: false`
+      # @raise [KeyError] if no job is registered under `name`
+      # @raise [Timeout::Error] if the job's `timeout:` is exceeded
+      def run_now(name)
+        job = @mutex.synchronize { @jobs.find { |j| j.name == name } }
+        raise KeyError, "job not registered: #{name.inspect}" unless job
+        return nil if skip_overlapping?(job)
+
+        execute_now(job)
+      end
+
       def next_runs(from: Time.now)
         jobs = @mutex.synchronize { @jobs.dup }
 
@@ -134,6 +152,41 @@ module Philiprehberger
           break unless running?
 
           sleep 1
+        end
+      end
+
+      def execute_now(job)
+        result = nil
+        error = nil
+
+        worker = Thread.new do
+          result = job.block.call(Time.now)
+        rescue StandardError => e
+          error = e
+        end
+
+        @mutex.synchronize do
+          @running_threads << worker
+          @job_threads[job.object_id] = worker
+        end
+
+        begin
+          if job.timeout && !worker.join(job.timeout)
+            worker.raise(Timeout::Error, 'job exceeded timeout')
+            worker.join(1)
+            worker.kill if worker.alive?
+            raise Timeout::Error, "job #{job.name.inspect} exceeded timeout of #{job.timeout}s"
+          end
+
+          worker.join unless job.timeout
+          raise error if error
+
+          result
+        ensure
+          @mutex.synchronize do
+            @running_threads.delete(worker)
+            @job_threads.delete(job.object_id) if @job_threads[job.object_id] == worker
+          end
         end
       end
     end

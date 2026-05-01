@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-01
+
+### Added
+- `Scheduler#run_now(name)` — manually trigger a registered job by name. Reuses the standard execution path (timeout + overlap-skip), runs synchronously, returns the block's value, and raises `KeyError` for unknown names or `Timeout::Error` when the job exceeds its `timeout:`. Returns `nil` when skipped due to `overlap: false`.
+
 ## [0.6.0] - 2026-04-16
 
 ### Added

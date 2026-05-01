@@ -993,4 +993,50 @@ RSpec.describe Philiprehberger::CronKit::Scheduler do
       expect(result).to eq(:cleaned_up)
     end
   end
+
+  describe '#run_now' do
+    it 'manually triggers a registered job and returns its value' do
+      scheduler = Philiprehberger::CronKit::Scheduler.new
+      scheduler.every('@hourly', name: :work) { 42 }
+
+      expect(scheduler.run_now(:work)).to eq(42)
+    end
+
+    it 'raises KeyError for an unknown job name' do
+      scheduler = Philiprehberger::CronKit::Scheduler.new
+      expect { scheduler.run_now(:missing) }.to raise_error(KeyError)
+    end
+
+    it 'honors timeout: by raising Timeout::Error' do
+      scheduler = Philiprehberger::CronKit::Scheduler.new
+      scheduler.every('@hourly', name: :slow, timeout: 0.05) { sleep 1 }
+
+      expect { scheduler.run_now(:slow) }.to raise_error(Timeout::Error)
+    end
+
+    it 'returns nil when overlap: false and the job is already running' do
+      scheduler = Philiprehberger::CronKit::Scheduler.new
+      gate = Queue.new
+      release = Queue.new
+      scheduler.every('@hourly', name: :exclusive, overlap: false) do
+        gate << :started
+        release.pop
+      end
+
+      thread = Thread.new { scheduler.run_now(:exclusive) }
+      gate.pop # ensure first run is in flight
+
+      expect(scheduler.run_now(:exclusive)).to be_nil
+
+      release << :go
+      thread.join
+    end
+
+    it 'propagates errors from the job block' do
+      scheduler = Philiprehberger::CronKit::Scheduler.new
+      scheduler.every('@hourly', name: :boom) { raise 'boom' }
+
+      expect { scheduler.run_now(:boom) }.to raise_error(StandardError, 'boom')
+    end
+  end
 end
