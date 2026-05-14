@@ -42,6 +42,18 @@ module Philiprehberger
         @mutex.synchronize { @jobs.map(&:name).compact }
       end
 
+      # Whether a job is registered under +name+.
+      #
+      # Anonymous jobs (registered without a +name:+) are never matched.
+      #
+      # @param name [Symbol, String, nil]
+      # @return [Boolean]
+      def job?(name)
+        return false if name.nil?
+
+        @mutex.synchronize { @jobs.any? { |j| j.name == name } }
+      end
+
       def remove(name)
         @mutex.synchronize do
           initial_size = @jobs.size

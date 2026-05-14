@@ -718,6 +718,29 @@ RSpec.describe Philiprehberger::CronKit::Scheduler do
     end
   end
 
+  describe '#job?' do
+    it 'returns true for a registered job name' do
+      scheduler.every('* * * * *', name: 'alpha') { nil }
+      expect(scheduler.job?('alpha')).to be true
+    end
+
+    it 'returns false for an unknown job name' do
+      scheduler.every('* * * * *', name: 'alpha') { nil }
+      expect(scheduler.job?('missing')).to be false
+    end
+
+    it 'returns false for nil' do
+      scheduler.every('* * * * *') { nil }
+      expect(scheduler.job?(nil)).to be false
+    end
+
+    it 'returns false after a job is removed' do
+      scheduler.every('* * * * *', name: 'temp') { nil }
+      scheduler.remove('temp')
+      expect(scheduler.job?('temp')).to be false
+    end
+  end
+
   describe '#remove' do
     it 'removes a job by name and returns true' do
       scheduler.every('* * * * *', name: 'temp') { nil }

@@ -188,6 +188,8 @@ scheduler.every("0 9 * * 1-5", name: "morning-report") do
 end
 
 scheduler.job_names     # => ["morning-report"]
+scheduler.job?("morning-report")   # => true
+scheduler.job?("does-not-exist")   # => false
 scheduler.remove("morning-report")
 ```
 
@@ -253,6 +255,7 @@ scheduler.next_runs(from: Time.now)
 | `Scheduler#every(expression, name: nil, timeout: nil, overlap: true, &block)` | Register a cron job |
 | `Scheduler#on_error(&block)` | Register a callback for job failures |
 | `Scheduler#job_names` | List registered job names |
+| `Scheduler#job?(name)` | Returns `true` if a job with the given name is registered |
 | `Scheduler#remove(name)` | Remove a job by name |
 | `Scheduler#run_now(name)` | Manually trigger a registered job; returns the block's value, raises `KeyError` for unknown names or `Timeout::Error` on timeout |
 | `Scheduler#next_runs(from:)` | Hash of job names to their next scheduled time |
