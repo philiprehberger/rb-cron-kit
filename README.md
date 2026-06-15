@@ -4,6 +4,8 @@
 [![Gem Version](https://badge.fury.io/rb/philiprehberger-cron_kit.svg)](https://rubygems.org/gems/philiprehberger-cron_kit)
 [![Last updated](https://img.shields.io/github/last-commit/philiprehberger/rb-cron-kit)](https://github.com/philiprehberger/rb-cron-kit/commits/main)
 
+![philiprehberger-cron_kit](https://raw.githubusercontent.com/philiprehberger/rb-cron-kit/main/package-card.webp)
+
 Cron expression parser and scheduler
 
 ## Requirements
@@ -183,14 +185,14 @@ scheduler.running_jobs # => 2
 ```ruby
 scheduler = Philiprehberger::CronKit.new
 
-scheduler.every("0 9 * * 1-5", name: "morning-report") do
+scheduler.every("0 9 * * 1-5", name: "morning_report") do
   generate_report
 end
 
-scheduler.job_names     # => ["morning-report"]
-scheduler.job?("morning-report")   # => true
-scheduler.job?("does-not-exist")   # => false
-scheduler.remove("morning-report")
+scheduler.job_names     # => ["morning_report"]
+scheduler.job?("morning_report")   # => true
+scheduler.job?("does_not_exist")   # => false
+scheduler.remove("morning_report")
 ```
 
 ### Manual Trigger
@@ -199,12 +201,12 @@ Trigger a registered job by name without restarting the scheduler — useful for
 or operator-driven re-runs.
 
 ```ruby
-scheduler.every("0 9 * * 1-5", name: :morning_report, timeout: 30) do
+scheduler.every("0 9 * * 1-5", name: "morning_report", timeout: 30) do
   generate_report
 end
 
-scheduler.run_now(:morning_report)  # => return value of the block
-scheduler.run_now(:missing)          # raises KeyError
+scheduler.run_now("morning_report")  # => return value of the block
+scheduler.run_now("missing")          # raises KeyError
 ```
 
 `run_now` honors `timeout:` (raises `Timeout::Error`) and respects `overlap: false`
@@ -214,7 +216,7 @@ scheduler.run_now(:missing)          # raises KeyError
 
 ```ruby
 scheduler.next_runs(from: Time.now)
-# => { "morning-report" => 2026-03-13 09:00:00 ... }
+# => { "morning_report" => 2026-03-13 09:00:00 ... }
 ```
 
 ### Supported Syntax

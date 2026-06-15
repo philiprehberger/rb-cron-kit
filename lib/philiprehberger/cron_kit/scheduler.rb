@@ -18,17 +18,43 @@ module Philiprehberger
         @job_threads = {}
       end
 
+      # Register a callback invoked when a job raises an error.
+      #
+      # Called with the failing +Job+ and the +StandardError+ raised. With no
+      # block, returns the currently registered callback (or +nil+).
+      #
+      # @yieldparam job [Job] the job that failed
+      # @yieldparam error [StandardError] the error raised by the job's block
+      # @return [Proc, nil] the registered callback when called without a block
       def on_error(&block)
         return @on_error unless block
 
         @on_error = block
       end
 
+      # Number of currently executing job threads.
+      #
+      # @return [Integer] count of live job threads
       def running_jobs
         @mutex.synchronize { @running_threads.count(&:alive?) }
       end
 
+      # Register a cron job to be executed when +expression+ matches.
+      #
+      # Accepts either a cron expression string or a pre-built +Expression+.
+      # Raises +ArgumentError+ immediately if no block is provided, surfacing
+      # configuration mistakes at registration time rather than at tick time.
+      #
+      # @param expression [String, Expression] cron expression or pre-built Expression
+      # @param name [Symbol, String, nil] optional job name for lookup/removal/triggering
+      # @param timeout [Numeric, nil] kill the job if it exceeds this many seconds
+      # @param overlap [Boolean] when +false+, skip the tick if a previous run is still active
+      # @yieldparam time [Time] the tick time the job fires at
+      # @return [self]
+      # @raise [ArgumentError] if no block is provided
       def every(expression, name: nil, timeout: nil, overlap: true, &block)
+        raise ArgumentError, 'block required' unless block
+
         expr = expression.is_a?(Expression) ? expression : Expression.new(expression)
 
         @mutex.synchronize do
@@ -38,6 +64,11 @@ module Philiprehberger
         self
       end
 
+      # Names of all registered named jobs.
+      #
+      # Anonymous jobs (registered without +name:+) are omitted.
+      #
+      # @return [Array<Symbol, String>] list of registered job names
       def job_names
         @mutex.synchronize { @jobs.map(&:name).compact }
       end
@@ -54,6 +85,10 @@ module Philiprehberger
         @mutex.synchronize { @jobs.any? { |j| j.name == name } }
       end
 
+      # Remove a registered job by name.
+      #
+      # @param name [Symbol, String] the job name to remove
+      # @return [Boolean] +true+ if a matching job was removed, +false+ otherwise
       def remove(name)
         @mutex.synchronize do
           initial_size = @jobs.size
@@ -80,6 +115,12 @@ module Philiprehberger
         execute_now(job)
       end
 
+      # Upcoming run times for every named job.
+      #
+      # Anonymous jobs are omitted.
+      #
+      # @param from [Time] starting point for the lookahead (defaults to +Time.now+)
+      # @return [Hash{Symbol, String => Time}] map of job name to the next matching time
       def next_runs(from: Time.now)
         jobs = @mutex.synchronize { @jobs.dup }
 
@@ -90,6 +131,11 @@ module Philiprehberger
         end
       end
 
+      # Start the scheduler loop in a background thread.
+      #
+      # Idempotent — calling +start+ on an already-running scheduler is a no-op.
+      #
+      # @return [self]
       def start
         @mutex.synchronize do
           return self if @running
@@ -103,6 +149,9 @@ module Philiprehberger
         self
       end
 
+      # Stop the scheduler loop and wait briefly for the background thread to exit.
+      #
+      # @return [self]
       def stop
         @mutex.synchronize { @running = false }
         @thread&.join(5)
@@ -111,6 +160,9 @@ module Philiprehberger
         self
       end
 
+      # Whether the scheduler loop is currently running.
+      #
+      # @return [Boolean]
       def running?
         @mutex.synchronize { @running }
       end

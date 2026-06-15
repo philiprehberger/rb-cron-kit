@@ -10,6 +10,8 @@ require_relative 'cron_kit/scheduler'
 
 module Philiprehberger
   module CronKit
+    class Error < StandardError; end
+
     # Parse a 5-field cron expression and return an Expression instance.
     # Supports non-standard aliases (@hourly, @daily, etc.) and optional timezone.
     def self.parse(expression, timezone: nil)

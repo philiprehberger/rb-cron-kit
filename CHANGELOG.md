@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-06-14
+
+### Changed
+- Added package card image to README
+- Added YARD doc comments to Scheduler public methods
+- Made job-name examples consistent in README
+
+### Fixed
+- Replaced bare RuntimeError raises in Expression parser with Error class
+- Scheduler#every now validates a block is provided at registration time
+
 ## [0.8.0] - 2026-05-13
 
 ### Added
@@ -154,7 +165,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Philiprehberger::CronKit.parse` convenience method
 - `Philiprehberger::CronKit.new` convenience method for creating a Scheduler
 
-[Unreleased]: https://github.com/philiprehberger/rb-cron-kit/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/philiprehberger/rb-cron-kit/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/philiprehberger/rb-cron-kit/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/philiprehberger/rb-cron-kit/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/philiprehberger/rb-cron-kit/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/philiprehberger/rb-cron-kit/compare/v0.5.1...v0.6.0

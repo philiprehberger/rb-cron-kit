@@ -95,7 +95,7 @@ module Philiprehberger
 
           time += 60
         end
-        raise 'no matching time found within 4 years'
+        raise Error, 'no matching time found within 4 years'
       end
 
       def scan_backward(time)
@@ -104,7 +104,7 @@ module Philiprehberger
 
           time -= 60
         end
-        raise 'no matching time found within 4 years'
+        raise Error, 'no matching time found within 4 years'
       end
 
       def field_match?(time)
