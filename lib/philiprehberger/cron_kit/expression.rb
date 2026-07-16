@@ -30,12 +30,14 @@ module Philiprehberger
         @timezone = timezone
         @utc_offset = Timezone.utc_offset_for(timezone)
         @fields = parse_expression(@raw)
+        parts = @raw.split(/\s+/)
+        @dom_restricted = parts[2] != '*'
+        @dow_restricted = parts[4] != '*'
       end
 
       def match?(time)
         time = coerce_time(time)
-        values = [time.min, time.hour, time.day, time.month, time.wday]
-        @fields.each_with_index.all? { |set, i| set.include?(values[i]) }
+        values_match?([time.min, time.hour, time.day, time.month, time.wday])
       end
 
       # Return true if any Time in the given enumerable matches the expression.
@@ -108,8 +110,32 @@ module Philiprehberger
       end
 
       def field_match?(time)
-        values = [time.min, time.hour, time.day, time.month, time.wday]
-        @fields.each_with_index.all? { |set, i| set.include?(values[i]) }
+        values_match?([time.min, time.hour, time.day, time.month, time.wday])
+      end
+
+      # Minute, hour, and month must always match. Standard (Vixie) cron ORs the
+      # day-of-month and day-of-week fields when both are restricted, so
+      # `0 0 13 * 5` fires on the 13th OR any Friday.
+      def values_match?(values)
+        return false unless @fields[0].include?(values[0]) # minute
+        return false unless @fields[1].include?(values[1]) # hour
+        return false unless @fields[3].include?(values[3]) # month
+
+        day_of_week_match?(values[2], values[4])
+      end
+
+      def day_of_week_match?(day, wday)
+        dom = @fields[2].include?(day)
+        dow = @fields[4].include?(wday)
+        if @dom_restricted && @dow_restricted
+          dom || dow
+        elsif @dom_restricted
+          dom
+        elsif @dow_restricted
+          dow
+        else
+          true
+        end
       end
     end
   end

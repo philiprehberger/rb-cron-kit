@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-07-15
+
+### Added
+- Named month tokens (`JAN`–`DEC`) and weekday tokens (`SUN`–`SAT`) in the month and day-of-week fields, case-insensitive, in single values, lists, and ranges (e.g. `MON-FRI`, `JAN,JUN,DEC`)
+- `7` accepted as an alias for Sunday in the day-of-week field (Vixie/crontab interop)
+
+### Fixed
+- Day-of-month / day-of-week now follow standard (Vixie) cron OR-semantics: when both fields are restricted, a time matches when either matches (e.g. `0 0 13 * 5` fires on the 13th or any Friday); previously the fields were ANDed, causing under-firing. Applies to `#match?`, `#next_at`, `#next_runs`, and `#previous_run`
+
 ## [0.8.1] - 2026-06-14
 
 ### Changed
@@ -165,7 +174,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Philiprehberger::CronKit.parse` convenience method
 - `Philiprehberger::CronKit.new` convenience method for creating a Scheduler
 
-[Unreleased]: https://github.com/philiprehberger/rb-cron-kit/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/philiprehberger/rb-cron-kit/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/philiprehberger/rb-cron-kit/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/philiprehberger/rb-cron-kit/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/philiprehberger/rb-cron-kit/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/philiprehberger/rb-cron-kit/compare/v0.6.0...v0.7.0

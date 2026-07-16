@@ -419,9 +419,9 @@ RSpec.describe Philiprehberger::CronKit::Expression do
       end.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
     end
 
-    it 'raises ParseError for day-of-week value of 7' do
+    it 'raises ParseError for day-of-week value of 8' do
       expect do
-        described_class.new('0 0 * * 7')
+        described_class.new('0 0 * * 8')
       end.to raise_error(Philiprehberger::CronKit::ParseError, /outside allowed range/)
     end
 
@@ -589,6 +589,151 @@ RSpec.describe Philiprehberger::CronKit::Expression do
       # March 7, 2026 is a Saturday
       expect(expr.match?(Time.new(2026, 3, 7, 0, 0))).to be true
       expect(expr.match?(Time.new(2026, 3, 8, 0, 0))).to be false
+    end
+  end
+
+  describe 'named month and weekday tokens' do
+    it 'accepts a three-letter month name as a single value' do
+      expr = described_class.new('0 0 1 JAN *')
+      expect(expr.match?(Time.new(2026, 1, 1, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 2, 1, 0, 0))).to be false
+    end
+
+    it 'accepts month names case-insensitively' do
+      expr = described_class.new('0 0 1 dec *')
+      expect(expr.match?(Time.new(2026, 12, 1, 0, 0))).to be true
+    end
+
+    it 'accepts a list of month names' do
+      expr = described_class.new('0 0 1 JAN,JUN,DEC *')
+      expect(expr.match?(Time.new(2026, 1, 1, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 6, 1, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 12, 1, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 3, 1, 0, 0))).to be false
+    end
+
+    it 'accepts a range of month names' do
+      expr = described_class.new('0 0 1 MAR-MAY *')
+      expect(expr.match?(Time.new(2026, 3, 1, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 5, 1, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 2, 1, 0, 0))).to be false
+      expect(expr.match?(Time.new(2026, 6, 1, 0, 0))).to be false
+    end
+
+    it 'accepts a three-letter weekday name as a single value' do
+      expr = described_class.new('0 0 * * MON')
+      # March 9, 2026 is a Monday
+      expect(expr.match?(Time.new(2026, 3, 9, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 3, 10, 0, 0))).to be false
+    end
+
+    it 'accepts a range of weekday names' do
+      expr = described_class.new('0 0 * * MON-FRI')
+      # March 9-13, 2026 are Mon-Fri; March 14 is Saturday
+      (9..13).each do |day|
+        expect(expr.match?(Time.new(2026, 3, day, 0, 0))).to be true
+      end
+      expect(expr.match?(Time.new(2026, 3, 14, 0, 0))).to be false
+    end
+
+    it 'accepts SUN as Sunday' do
+      expr = described_class.new('0 0 * * SUN')
+      # March 8, 2026 is a Sunday
+      expect(expr.match?(Time.new(2026, 3, 8, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 3, 9, 0, 0))).to be false
+    end
+
+    it 'raises ParseError for an unknown month name' do
+      expect do
+        described_class.new('0 0 1 FOO *')
+      end.to raise_error(Philiprehberger::CronKit::ParseError, /invalid name/)
+    end
+
+    it 'raises ParseError for an unknown weekday name' do
+      expect do
+        described_class.new('0 0 * * XYZ')
+      end.to raise_error(Philiprehberger::CronKit::ParseError, /invalid name/)
+    end
+  end
+
+  describe 'day-of-week 7 as Sunday' do
+    it 'treats a bare 7 as Sunday' do
+      expr = described_class.new('* * * * 7')
+      # March 8, 2026 is a Sunday
+      expect(expr.match?(Time.new(2026, 3, 8, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 3, 9, 0, 0))).to be false
+    end
+
+    it 'treats 0 and 7 as equivalent' do
+      zero = described_class.new('0 0 * * 0')
+      seven = described_class.new('0 0 * * 7')
+      sunday = Time.new(2026, 3, 8, 0, 0)
+      expect(zero.match?(sunday)).to eq(seven.match?(sunday))
+      expect(seven.match?(sunday)).to be true
+    end
+
+    it 'accepts 7 inside a range as Sunday' do
+      expr = described_class.new('0 0 * * 5-7')
+      # March 6 (Fri), 7 (Sat), 8 (Sun) 2026; March 9 is Monday
+      expect(expr.match?(Time.new(2026, 3, 6, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 3, 7, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 3, 8, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 3, 9, 0, 0))).to be false
+    end
+  end
+
+  describe 'day-of-month / day-of-week OR-semantics' do
+    it 'ORs DOM and DOW when both are restricted' do
+      # Fire on the 13th OR any Friday.
+      expr = described_class.new('0 0 13 * 5')
+      # March 13, 2026 is a Friday (both match)
+      expect(expr.match?(Time.new(2026, 3, 13, 0, 0))).to be true
+      # March 6, 2026 is a Friday but not the 13th (DOW matches)
+      expect(expr.match?(Time.new(2026, 3, 6, 0, 0))).to be true
+      # April 13, 2026 is a Monday but the 13th (DOM matches)
+      expect(expr.match?(Time.new(2026, 4, 13, 0, 0))).to be true
+      # March 10, 2026 is a Tuesday and not the 13th (neither matches)
+      expect(expr.match?(Time.new(2026, 3, 10, 0, 0))).to be false
+    end
+
+    it 'requires only DOM when DOW is a wildcard' do
+      expr = described_class.new('0 0 13 * *')
+      expect(expr.match?(Time.new(2026, 3, 13, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 3, 6, 0, 0))).to be false
+    end
+
+    it 'requires only DOW when DOM is a wildcard' do
+      expr = described_class.new('0 0 * * 5')
+      # March 6, 2026 is a Friday
+      expect(expr.match?(Time.new(2026, 3, 6, 0, 0))).to be true
+      # March 13, 2026 is a Friday
+      expect(expr.match?(Time.new(2026, 3, 13, 0, 0))).to be true
+      # March 12, 2026 is a Thursday
+      expect(expr.match?(Time.new(2026, 3, 12, 0, 0))).to be false
+    end
+
+    it 'always matches the day when both DOM and DOW are wildcards' do
+      expr = described_class.new('0 0 * * *')
+      expect(expr.match?(Time.new(2026, 3, 10, 0, 0))).to be true
+      expect(expr.match?(Time.new(2026, 3, 13, 0, 0))).to be true
+    end
+
+    it 'next_at honors OR-semantics between DOM and DOW' do
+      expr = described_class.new('0 0 13 * 5')
+      # From March 1, 2026, the first hit is Friday March 6 (DOW), before the 13th.
+      result = expr.next_at(from: Time.new(2026, 3, 1, 0, 0, 0))
+      expect(result.year).to eq(2026)
+      expect(result.month).to eq(3)
+      expect(result.day).to eq(6)
+    end
+
+    it 'previous_run honors OR-semantics between DOM and DOW' do
+      expr = described_class.new('0 0 13 * 5')
+      # From March 10, 2026, the most recent hit is Friday March 6 (DOW).
+      result = expr.previous_run(from: Time.new(2026, 3, 10, 12, 0, 0))
+      expect(result.year).to eq(2026)
+      expect(result.month).to eq(3)
+      expect(result.day).to eq(6)
     end
   end
 end

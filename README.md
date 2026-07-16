@@ -219,6 +219,27 @@ scheduler.next_runs(from: Time.now)
 # => { "morning_report" => 2026-03-13 09:00:00 ... }
 ```
 
+### Named Tokens and Sunday Interop
+
+Three-letter month names (`JAN`–`DEC`) and weekday names (`SUN`–`SAT`) are accepted in the month and day-of-week fields, case-insensitive, in single values, lists, and ranges. In the day-of-week field, `7` is also accepted as an alias for Sunday (`0`), matching Vixie/crontab.
+
+```ruby
+Philiprehberger::CronKit.parse("0 9 * * MON-FRI")    # weekdays at 09:00
+Philiprehberger::CronKit.parse("0 0 1 JAN,JUN,DEC *") # 1st of Jan, Jun, Dec
+Philiprehberger::CronKit.parse("* * * * 7")           # every minute on Sunday (7 == 0)
+```
+
+### Day-of-Month / Day-of-Week Matching
+
+Following standard (Vixie) cron, when **both** the day-of-month and day-of-week fields are restricted (neither is `*`), a time matches when **either** field matches. When only one is restricted, only that field must match; when both are `*`, the day is unconstrained.
+
+```ruby
+# Fires on the 13th OR any Friday
+expr = Philiprehberger::CronKit.parse("0 0 13 * 5")
+expr.match?(Time.new(2026, 3, 6))  # => true  (Friday, not the 13th)
+expr.match?(Time.new(2026, 4, 13)) # => true  (13th, not a Friday)
+```
+
 ### Supported Syntax
 
 | Token   | Example    | Description               |
@@ -228,6 +249,7 @@ scheduler.next_runs(from: Time.now)
 | Range   | `1-5`      | Values from 1 through 5   |
 | Step    | `*/5`      | Every 5th value           |
 | List    | `1,3,5`   | Values 1, 3, and 5        |
+| Name    | `MON-FRI`  | Month/weekday names       |
 | Alias   | `@daily`   | Non-standard shorthand    |
 
 ### Fields
@@ -237,8 +259,8 @@ scheduler.next_runs(from: Time.now)
 | 1        | Minute        | 0-59   |
 | 2        | Hour          | 0-23   |
 | 3        | Day of month  | 1-31   |
-| 4        | Month         | 1-12   |
-| 5        | Day of week   | 0-6    |
+| 4        | Month         | 1-12 (or `JAN`-`DEC`) |
+| 5        | Day of week   | 0-6 (or `SUN`-`SAT`; `7` = Sunday) |
 
 ## API
 
