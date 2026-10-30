@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-30
+
+### Added
+- `Expression#runs_between(start, finish, limit: nil)` — all matching times in the inclusive range `[start, finish]`, evaluated in the expression's timezone and optionally capped by `limit:`; raises `ArgumentError` when `finish` is before `start`
+- `Scheduler#pause(name)`, `#resume(name)`, and `#paused?(name)` — skip a named job's scheduled runs without removing it (`run_now` still works); raise `KeyError` for unknown names
+
+### Changed
+- `Scheduler#remove(name)` now also clears the job's paused state
+- Aligned `.gitignore` with the guide template
+- Aligned CI workflow with the guide template
+
 ## [0.9.0] - 2026-07-15
 
 ### Added
@@ -92,7 +103,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add Sponsor badge to README
 - Fix License section format
 - Sync gemspec summary with README
-
 
 ## [0.3.7] - 2026-03-24
 

@@ -322,6 +322,98 @@ RSpec.describe Philiprehberger::CronKit::Expression do
     end
   end
 
+  describe '#runs_between' do
+    it 'returns every match in the range' do
+      expr = described_class.new('0 * * * *')
+      start = Time.new(2026, 3, 10, 12, 30, 0)
+      finish = Time.new(2026, 3, 10, 15, 30, 0)
+      results = expr.runs_between(start, finish)
+
+      expect(results.map(&:hour)).to eq([13, 14, 15])
+      expect(results.map(&:min)).to all(eq(0))
+    end
+
+    it 'includes both endpoints when they match' do
+      expr = described_class.new('0 * * * *')
+      start = Time.new(2026, 3, 10, 12, 0, 0)
+      finish = Time.new(2026, 3, 10, 14, 0, 0)
+      results = expr.runs_between(start, finish)
+
+      expect(results).to eq([start, start + 3600, finish])
+    end
+
+    it 'excludes a start minute that has already partially elapsed' do
+      expr = described_class.new('* * * * *')
+      start = Time.new(2026, 3, 10, 12, 0, 30)
+      finish = Time.new(2026, 3, 10, 12, 3, 0)
+      results = expr.runs_between(start, finish)
+
+      expect(results.map(&:min)).to eq([1, 2, 3])
+    end
+
+    it 'caps results with limit:' do
+      expr = described_class.new('*/15 * * * *')
+      start = Time.new(2026, 3, 10, 0, 0, 0)
+      finish = Time.new(2026, 3, 11, 0, 0, 0)
+      results = expr.runs_between(start, finish, limit: 3)
+
+      expect(results.map(&:min)).to eq([0, 15, 30])
+    end
+
+    it 'returns an empty array for limit: 0' do
+      expr = described_class.new('* * * * *')
+      start = Time.new(2026, 3, 10, 0, 0, 0)
+
+      expect(expr.runs_between(start, start + 600, limit: 0)).to eq([])
+    end
+
+    it 'returns an empty array when nothing matches' do
+      expr = described_class.new('0 0 1 1 *')
+      start = Time.new(2026, 3, 10, 0, 0, 0)
+
+      expect(expr.runs_between(start, start + 86_400)).to eq([])
+    end
+
+    it 'returns a single time when start equals finish and matches' do
+      expr = described_class.new('30 9 * * *')
+      time = Time.new(2026, 3, 10, 9, 30, 0)
+
+      expect(expr.runs_between(time, time)).to eq([time])
+    end
+
+    it 'agrees with next_runs' do
+      expr = described_class.new('0,30 9-17 * * 1-5')
+      start = Time.new(2026, 3, 9, 8, 0, 0)
+      expected = expr.next_runs(count: 6, from: start)
+
+      expect(expr.runs_between(start, expected.last)).to eq(expected)
+    end
+
+    it 'evaluates in the expression timezone' do
+      expr = described_class.new('0 9 * * *', timezone: '+05:00')
+      start = Time.new(2026, 3, 10, 0, 0, 0, 0)
+      finish = Time.new(2026, 3, 12, 0, 0, 0, 0)
+      results = expr.runs_between(start, finish)
+
+      expect(results.map(&:getutc)).to eq([Time.utc(2026, 3, 10, 4, 0, 0), Time.utc(2026, 3, 11, 4, 0, 0)])
+      expect(results.map(&:hour)).to all(eq(9))
+    end
+
+    it 'raises ArgumentError when finish is before start' do
+      expr = described_class.new('* * * * *')
+      start = Time.new(2026, 3, 10, 12, 0, 0)
+
+      expect { expr.runs_between(start, start - 60) }.to raise_error(ArgumentError, /finish/)
+    end
+
+    it 'raises ArgumentError for a negative limit' do
+      expr = described_class.new('* * * * *')
+      start = Time.new(2026, 3, 10, 12, 0, 0)
+
+      expect { expr.runs_between(start, start + 60, limit: -1) }.to raise_error(ArgumentError, /limit/)
+    end
+  end
+
   describe 'timezone support' do
     it 'evaluates match? in the specified timezone' do
       # UTC+0 expression; 9:00 UTC
@@ -1159,6 +1251,80 @@ RSpec.describe Philiprehberger::CronKit::Scheduler do
         nil
       end
       expect(result).to eq(:cleaned_up)
+    end
+  end
+
+  describe '#pause / #resume / #paused?' do
+    let(:expr) { Philiprehberger::CronKit::Expression.new('* * * * *') }
+
+    it 'is not paused by default' do
+      scheduler.every(expr, name: :report) { nil }
+
+      expect(scheduler.paused?(:report)).to be false
+    end
+
+    it 'skips a paused job on tick' do
+      calls = Queue.new
+      scheduler.every(expr, name: :report) { calls << :report }
+      scheduler.every(expr, name: :other) { calls << :other }
+
+      scheduler.pause(:report)
+      scheduler.send(:tick)
+
+      expect(scheduler.paused?(:report)).to be true
+      expect(calls.size).to eq(1)
+      expect(calls.pop).to eq(:other)
+    end
+
+    it 'fires again after resume' do
+      calls = Queue.new
+      scheduler.every(expr, name: :report) { calls << :report }
+
+      scheduler.pause(:report)
+      scheduler.send(:tick)
+      scheduler.resume(:report)
+      scheduler.send(:tick)
+
+      expect(scheduler.paused?(:report)).to be false
+      expect(calls.size).to eq(1)
+    end
+
+    it 'still allows run_now on a paused job' do
+      scheduler.every(expr, name: :report) { :ran }
+      scheduler.pause(:report)
+
+      expect(scheduler.run_now(:report)).to eq(:ran)
+    end
+
+    it 'returns self for chaining' do
+      scheduler.every(expr, name: :report) { nil }
+
+      expect(scheduler.pause(:report)).to be(scheduler)
+      expect(scheduler.resume(:report)).to be(scheduler)
+    end
+
+    it 'is idempotent' do
+      scheduler.every(expr, name: :report) { nil }
+
+      scheduler.pause(:report).pause(:report)
+      expect(scheduler.paused?(:report)).to be true
+      scheduler.resume(:report).resume(:report)
+      expect(scheduler.paused?(:report)).to be false
+    end
+
+    it 'raises KeyError for unknown names' do
+      expect { scheduler.pause(:missing) }.to raise_error(KeyError, /missing/)
+      expect { scheduler.resume(:missing) }.to raise_error(KeyError, /missing/)
+      expect { scheduler.paused?(:missing) }.to raise_error(KeyError, /missing/)
+    end
+
+    it 'clears the paused state when the job is removed' do
+      scheduler.every(expr, name: :report) { nil }
+      scheduler.pause(:report)
+      scheduler.remove(:report)
+      scheduler.every(expr, name: :report) { nil }
+
+      expect(scheduler.paused?(:report)).to be false
     end
   end
 

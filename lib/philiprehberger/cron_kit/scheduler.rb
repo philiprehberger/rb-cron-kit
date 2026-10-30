@@ -16,6 +16,7 @@ module Philiprehberger
         @on_error = nil
         @running_threads = []
         @job_threads = {}
+        @paused = {}
       end
 
       # Register a callback invoked when a job raises an error.
@@ -93,7 +94,53 @@ module Philiprehberger
         @mutex.synchronize do
           initial_size = @jobs.size
           @jobs.reject! { |job| job.name == name }
+          @paused.delete(name)
           @jobs.size < initial_size
+        end
+      end
+
+      # Pause a named job so the scheduler skips its scheduled runs.
+      #
+      # The job stays registered and can still be triggered with +run_now+.
+      # Pausing an already-paused job is a no-op.
+      #
+      # @param name [Symbol, String] the job name to pause
+      # @return [self]
+      # @raise [KeyError] if no job is registered under +name+
+      def pause(name)
+        @mutex.synchronize do
+          ensure_registered!(name)
+          @paused[name] = true
+        end
+
+        self
+      end
+
+      # Resume a paused job so its scheduled runs fire again.
+      #
+      # Resuming a job that is not paused is a no-op.
+      #
+      # @param name [Symbol, String] the job name to resume
+      # @return [self]
+      # @raise [KeyError] if no job is registered under +name+
+      def resume(name)
+        @mutex.synchronize do
+          ensure_registered!(name)
+          @paused.delete(name)
+        end
+
+        self
+      end
+
+      # Whether the named job is currently paused.
+      #
+      # @param name [Symbol, String] the job name to check
+      # @return [Boolean]
+      # @raise [KeyError] if no job is registered under +name+
+      def paused?(name)
+        @mutex.synchronize do
+          ensure_registered!(name)
+          @paused.key?(name)
         end
       end
 
@@ -178,7 +225,7 @@ module Philiprehberger
 
       def tick
         now = Time.now
-        jobs = @mutex.synchronize { @jobs.dup }
+        jobs = @mutex.synchronize { @jobs.reject { |job| job.name && @paused.key?(job.name) } }
 
         threads = jobs.filter_map do |job|
           next unless job.expression.match?(now)
@@ -197,6 +244,13 @@ module Philiprehberger
           @running_threads.select!(&:alive?)
           @job_threads.select! { |_, t| t.alive? }
         end
+      end
+
+      # Caller must hold @mutex.
+      def ensure_registered!(name)
+        return if !name.nil? && @jobs.any? { |j| j.name == name }
+
+        raise KeyError, "job not registered: #{name.inspect}"
       end
 
       def skip_overlapping?(job)

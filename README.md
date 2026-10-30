@@ -99,6 +99,22 @@ expr.previous_run(from: Time.now)
 # => 2026-03-17 13:00:00
 ```
 
+### Runs Between
+
+List every matching time in an inclusive range, evaluated in the expression's timezone. Pass `limit:` to cap the result:
+
+```ruby
+expr = Philiprehberger::CronKit.parse("0 * * * *")
+
+expr.runs_between(Time.new(2026, 3, 10, 12, 0), Time.new(2026, 3, 10, 14, 0))
+# => [2026-03-10 12:00, 2026-03-10 13:00, 2026-03-10 14:00]
+
+expr.runs_between(Time.new(2026, 3, 10), Time.new(2026, 3, 11), limit: 2)
+# => [2026-03-10 00:00, 2026-03-10 01:00]
+```
+
+Raises `ArgumentError` when `finish` is before `start`.
+
 ### Non-Standard Aliases
 
 Use convenient shorthand aliases instead of full cron expressions:
@@ -212,6 +228,21 @@ scheduler.run_now("missing")          # raises KeyError
 `run_now` honors `timeout:` (raises `Timeout::Error`) and respects `overlap: false`
 (returns `nil` when the job is already running).
 
+### Pausing Jobs
+
+Temporarily skip a named job's scheduled runs without removing it. `run_now` still works while a job is paused:
+
+```ruby
+scheduler.pause("morning_report")
+scheduler.paused?("morning_report") # => true
+scheduler.run_now("morning_report") # still runs
+
+scheduler.resume("morning_report")
+scheduler.paused?("morning_report") # => false
+
+scheduler.pause("missing")          # raises KeyError
+```
+
 ### Inspecting Next Runs
 
 ```ruby
@@ -274,6 +305,7 @@ expr.match?(Time.new(2026, 4, 13)) # => true  (13th, not a Friday)
 | `Expression#next_at(from:)` | Find the next matching Time |
 | `Expression#next_runs(count: 5, from:)` | Return the next N matching times |
 | `Expression#previous_run(from:)` | Find the most recent past match |
+| `Expression#runs_between(start, finish, limit: nil)` | All matching times in `[start, finish]`, optionally capped; raises `ArgumentError` if `finish < start` |
 | `Expression#to_s` | Return the original expression string |
 | `Expression#timezone` | Return the configured timezone (or nil) |
 | `Scheduler#every(expression, name: nil, timeout: nil, overlap: true, &block)` | Register a cron job |
@@ -281,6 +313,9 @@ expr.match?(Time.new(2026, 4, 13)) # => true  (13th, not a Friday)
 | `Scheduler#job_names` | List registered job names |
 | `Scheduler#job?(name)` | Returns `true` if a job with the given name is registered |
 | `Scheduler#remove(name)` | Remove a job by name |
+| `Scheduler#pause(name)` | Skip a named job's scheduled runs without removing it; raises `KeyError` for unknown names |
+| `Scheduler#resume(name)` | Resume a paused job; raises `KeyError` for unknown names |
+| `Scheduler#paused?(name)` | Returns `true` if the named job is paused; raises `KeyError` for unknown names |
 | `Scheduler#run_now(name)` | Manually trigger a registered job; returns the block's value, raises `KeyError` for unknown names or `Timeout::Error` on timeout |
 | `Scheduler#next_runs(from:)` | Hash of job names to their next scheduled time |
 | `Scheduler#running_jobs` | Count of currently executing job threads |

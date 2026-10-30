@@ -61,6 +61,26 @@ module Philiprehberger
         result
       end
 
+      # All matching times in the inclusive range +[start, finish]+.
+      #
+      # Evaluated in the expression's timezone, using the same minute-level
+      # matching as +next_at+. A +start+ that falls exactly on a matching
+      # minute is included; seconds are ignored when stepping between minutes.
+      #
+      # @param start [Time] beginning of the range (inclusive)
+      # @param finish [Time] end of the range (inclusive)
+      # @param limit [Integer, nil] maximum number of times to return
+      # @return [Array<Time>] matching times in ascending order
+      # @raise [ArgumentError] if +finish+ is before +start+ or +limit+ is negative
+      def runs_between(start, finish, limit: nil)
+        start = start.to_time if start.respond_to?(:to_time)
+        finish = finish.to_time if finish.respond_to?(:to_time)
+        raise ArgumentError, 'finish must not be before start' if finish < start
+        raise ArgumentError, 'limit must be a non-negative Integer' if limit && (!limit.is_a?(Integer) || limit.negative?)
+
+        collect_between(start, finish, limit)
+      end
+
       def previous_run(from: Time.now)
         time = start_time_back(from)
         scan_backward(time)
@@ -98,6 +118,22 @@ module Philiprehberger
           time += 60
         end
         raise Error, 'no matching time found within 4 years'
+      end
+
+      def collect_between(start, finish, limit)
+        result = []
+        return result if limit&.zero?
+
+        time = start_time(start, 0)
+        time += 60 if time < start
+        while time <= finish
+          if field_match?(time)
+            result << time
+            break if limit && result.size >= limit
+          end
+          time += 60
+        end
+        result
       end
 
       def scan_backward(time)
